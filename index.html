@@ -77,7 +77,75 @@
     text-transform:capitalize;
   }
 
+  .userbar{
+    padding: 0 20px 12px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .userbar .user-name{
+    color: rgba(251,243,228,0.72);
+    font-size: 13px;
+    font-weight:500;
+    cursor:pointer;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .userbar .user-name:active{ opacity:0.7; }
+  .profile-avatar{
+    width: 30px; height:30px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--ink);
+    border:none;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700;
+    font-size: 12.5px;
+    font-family:'Fraunces', serif;
+    flex-shrink:0;
+    cursor:pointer;
+    margin-left:auto;
+  }
+
   main{ padding: 6px 16px 0; flex:1; }
+
+  .app-footer{
+    text-align:center;
+    padding: 26px 20px 10px;
+    font-size: 12px;
+  }
+  .app-footer a{
+    color: #6FA8DC;
+    text-decoration:none;
+  }
+
+  /* SEPARAÇÃO DE CAIXAS */
+  .caixa-split{
+    display:flex;
+    gap:10px;
+    margin-top: 14px;
+  }
+  .caixa-split .split-item{
+    flex:1;
+    background: rgba(251,243,228,0.06);
+    border: 1px solid rgba(251,243,228,0.1);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .caixa-split .split-label{
+    font-size: 11px;
+    color: rgba(251,243,228,0.55);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    margin-bottom:4px;
+  }
+  .caixa-split .split-valor{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size: 15px;
+    color: var(--paper);
+  }
 
   /* HERO */
   .hero-card{
@@ -314,6 +382,48 @@
     border-color: var(--teal);
     color: #0D2422;
   }
+  .participant-del{
+    background:none; border:none; color: var(--ink-soft);
+    font-size: 15px; opacity:0.4; cursor:pointer; padding: 4px 2px;
+    flex-shrink:0;
+  }
+  .participant-del:active{ opacity:0.9; }
+
+  /* RELATÓRIO */
+  .report-tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .report-tab{
+    flex:1;
+    border: 1px solid var(--line-paper);
+    background:#fff;
+    color: var(--ink-soft);
+    padding: 9px 4px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  .report-tab.selected{ background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .report-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding: 10px 2px;
+    border-bottom: 1px dashed var(--line-paper);
+    font-size: 13.5px;
+  }
+  .report-row:last-child{ border-bottom:none; }
+  .report-row .r-label{ color: var(--ink-soft); }
+  .report-row .r-valor{ font-family:'IBM Plex Mono', monospace; font-weight:600; color: var(--ink); }
+  .report-section-title{
+    font-size: 12px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color: var(--ink-soft);
+    margin: 16px 0 2px;
+    font-weight:600;
+  }
+  .report-section-title:first-child{ margin-top:0; }
 
   .empty-state-dark{
     text-align:center;
@@ -564,6 +674,10 @@
     <div class="date" id="dataHoje"></div>
     <button class="config-btn" onclick="openConfigModal()" aria-label="Definições e backup">⚙️</button>
   </div>
+  <div class="userbar">
+    <span class="user-name" id="nomeUsuarioDisplay" onclick="editarNomeUsuario()">Toca para pores o teu nome</span>
+    <button class="profile-avatar" id="avatarUsuario" onclick="openRelatorioModal()" aria-label="Ver relatórios">👤</button>
+  </div>
 
   <main>
     <div id="view-caixa" class="view">
@@ -577,6 +691,16 @@
         <div class="hero-sub">
           <span class="sub-entrada">Entradas <b id="totalEntradas">0,00</b></span>
           <span class="sub-saida">Saídas <b id="totalSaidas">0,00</b></span>
+        </div>
+        <div class="caixa-split">
+          <div class="split-item">
+            <div class="split-label">🧺 Produtos</div>
+            <div class="split-valor" id="totalProdutosHoje">0,00 MT</div>
+          </div>
+          <div class="split-item">
+            <div class="split-label">⚙️ Máquina</div>
+            <div class="split-valor" id="totalMaquinaHoje">0,00 MT</div>
+          </div>
         </div>
       </section>
 
@@ -640,6 +764,8 @@
       <div id="listaPoupanca" class="participant-list"></div>
       <div id="emptyPoupanca" class="empty-state-dark">Ainda não guardaste nada.<br>Toca em "+ Guardar da Caixa" para começar a tua poupança.</div>
     </div>
+
+    <footer class="app-footer">Powered by SmartMetrics</footer>
   </main>
 
   <nav class="tabbar">
@@ -696,8 +822,8 @@
     <h3>Registar Entrega do Xitique</h3>
     <label>Valor Entregue (MT)</label>
     <input id="valorEntregaInput" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01">
-    <label>Para quem? (opcional)</label>
-    <input id="notaEntregaInput" type="text" placeholder="Ex: Dona Amélia" maxlength="30">
+    <label>Quem recebeu?</label>
+    <select id="notaEntregaInput" style="width:100%;border:1px solid var(--line-paper);background:#fff;border-radius:12px;padding:13px 14px;font-size:15px;font-family:'IBM Plex Sans',sans-serif;color:var(--ink);"></select>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeEntregaModal()">Cancelar</button>
       <button class="btn-save" onclick="confirmarEntrega()">Confirmar</button>
@@ -755,6 +881,21 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeRetirarModal()">Cancelar</button>
       <button class="btn-save" onclick="confirmarRetirar()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalRelatorio" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="tituloRelatorio">Relatório</h3>
+    <div class="report-tabs">
+      <button class="report-tab" id="repTabDia" onclick="selecionarPeriodoRelatorio('dia')">Diário</button>
+      <button class="report-tab" id="repTabSemana" onclick="selecionarPeriodoRelatorio('semana')">Semanal</button>
+      <button class="report-tab" id="repTabMes" onclick="selecionarPeriodoRelatorio('mes')">Mensal</button>
+    </div>
+    <div id="reportBody"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" style="width:100%" onclick="closeRelatorioModal()">Fechar</button>
     </div>
   </div>
 </div>
@@ -854,7 +995,8 @@
     'xitique_participantes',
     'xitique_pagamentos',
     'xitique_entregas',
-    'poupanca_movimentos'
+    'poupanca_movimentos',
+    'usuario_nome'
   ];
 
   function exportarBackup(){
@@ -1005,6 +1147,11 @@
     document.getElementById('saldoHoje').innerHTML = formatMoney(saldo) + '<span>MT</span>';
     document.getElementById('totalEntradas').textContent = formatMoney(totalEntradas);
     document.getElementById('totalSaidas').textContent = formatMoney(totalSaidas);
+
+    const totalProdutosHoje = doHoje.filter(t=>t.tipo==='entrada' && t.categoria==='venda').reduce((s,t)=>s+t.valor,0);
+    const totalMaquinaHoje = doHoje.filter(t=>t.tipo==='entrada' && t.categoria==='maquina').reduce((s,t)=>s+t.valor,0);
+    document.getElementById('totalProdutosHoje').textContent = formatMoney(totalProdutosHoje) + ' MT';
+    document.getElementById('totalMaquinaHoje').textContent = formatMoney(totalMaquinaHoje) + ' MT';
 
     const linhaInicial = document.getElementById('saldoInicialRow');
     const definido = saldoInicialDefinidoHoje();
@@ -1161,11 +1308,21 @@
 
   function apagarParticipante(){
     if (!editandoParticipanteId) return;
-    if (!confirm('Apagar este participante e o seu histórico de pagamentos?')) return;
-    participantes = participantes.filter(p=>p.id!==editandoParticipanteId);
-    pagamentos = pagamentos.filter(p=>p.participanteId!==editandoParticipanteId);
-    salvarXitiqueStorage();
+    apagarParticipanteId(editandoParticipanteId);
     closeParticipanteModal();
+  }
+
+  function apagarParticipanteDireto(id){
+    apagarParticipanteId(id);
+  }
+
+  function apagarParticipanteId(id){
+    const p = participantes.find(x=>x.id===id);
+    if (!p) return;
+    if (!confirm(`Apagar "${p.nome}" e o seu histórico de pagamentos?`)) return;
+    participantes = participantes.filter(x=>x.id!==id);
+    pagamentos = pagamentos.filter(x=>x.participanteId!==id);
+    salvarXitiqueStorage();
     renderXitique();
   }
 
@@ -1212,8 +1369,10 @@
   function openEntregaModal(){
     const total = totalGuardadoXitique();
     if (total <= 0){ alert('Ainda não há dinheiro guardado no Xitique.'); return; }
+    if (participantes.length === 0){ alert('Adiciona primeiro pelo menos um participante — a entrega só pode ser feita a alguém da lista.'); return; }
     document.getElementById('valorEntregaInput').value = total.toFixed(2);
-    document.getElementById('notaEntregaInput').value = '';
+    const sel = document.getElementById('notaEntregaInput');
+    sel.innerHTML = participantes.map(p => `<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
     document.getElementById('modalEntrega').hidden = false;
   }
 
@@ -1223,14 +1382,18 @@
 
   function confirmarEntrega(){
     const valor = parseFloat(document.getElementById('valorEntregaInput').value);
-    const nota = document.getElementById('notaEntregaInput').value.trim();
+    const sel = document.getElementById('notaEntregaInput');
+    const participanteId = sel.value;
+    const participante = participantes.find(p=>p.id===participanteId);
     const total = totalGuardadoXitique();
+    if (!participante){ alert('Escolhe quem recebeu a entrega.'); return; }
     if (!valor || valor <= 0){ alert('Introduz um valor válido.'); return; }
     if (valor > total + 0.01){ alert('Esse valor é maior que o total guardado (' + formatMoney(total) + ' MT).'); return; }
     entregas.push({
       id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
       valor: valor,
-      nota: nota,
+      participanteId: participante.id,
+      nota: participante.nome,
       dateKey: HOJE_KEY,
       timestamp: Date.now()
     });
@@ -1286,6 +1449,7 @@
             <div class="participant-valor">Combinado: ${formatMoney(p.valorCombinado)} MT</div>
           </div>
           <button class="pago-btn ${pago?'paid':''}" onclick="togglePagamento('${p.id}')">${pago ? '✓ Pagou' : 'Marcar Pago'}</button>
+          <button class="participant-del" onclick="apagarParticipanteDireto('${p.id}')" aria-label="Apagar participante">✕</button>
         `;
         lista.appendChild(row);
       });
@@ -1422,6 +1586,102 @@
         lista.appendChild(row);
       });
     }
+  }
+
+  /* ==================== PERFIL DO UTILIZADOR ==================== */
+  const STORAGE_NOME_USUARIO = 'usuario_nome';
+
+  function iniciaisUsuario(nome){
+    const partes = nome.trim().split(/\s+/).slice(0,2);
+    return partes.map(p=>p[0].toUpperCase()).join('') || '👤';
+  }
+
+  function renderUsuario(){
+    let nome = '';
+    try { nome = JSON.parse(localStorage.getItem(STORAGE_NOME_USUARIO)) || ''; } catch(e){ nome = ''; }
+    if (typeof nome !== 'string') nome = '';
+    const display = document.getElementById('nomeUsuarioDisplay');
+    const avatar = document.getElementById('avatarUsuario');
+    if (nome){
+      display.textContent = nome;
+      avatar.textContent = iniciaisUsuario(nome);
+    } else {
+      display.textContent = 'Toca para pores o teu nome';
+      avatar.textContent = '👤';
+    }
+  }
+
+  function editarNomeUsuario(){
+    let atual = '';
+    try { atual = JSON.parse(localStorage.getItem(STORAGE_NOME_USUARIO)) || ''; } catch(e){ atual = ''; }
+    const nome = prompt('Como te chamas?', atual);
+    if (nome === null) return;
+    localStorage.setItem(STORAGE_NOME_USUARIO, JSON.stringify(nome.trim()));
+    renderUsuario();
+  }
+
+  renderUsuario();
+
+  /* ==================== RELATÓRIOS ==================== */
+  let periodoRelatorioAtual = 'dia';
+
+  function seteDiasAtrasKey(){
+    return dateKey(new Date(Date.now() - 6*86400000));
+  }
+
+  function dentroPeriodo(dk, periodo){
+    if (periodo === 'dia') return dk === HOJE_KEY;
+    if (periodo === 'semana') return dk >= seteDiasAtrasKey() && dk <= HOJE_KEY;
+    if (periodo === 'mes') return dk.slice(0,7) === HOJE_KEY.slice(0,7);
+    return false;
+  }
+
+  function openRelatorioModal(){
+    document.getElementById('modalRelatorio').hidden = false;
+    selecionarPeriodoRelatorio(periodoRelatorioAtual);
+  }
+
+  function closeRelatorioModal(){
+    document.getElementById('modalRelatorio').hidden = true;
+  }
+
+  function selecionarPeriodoRelatorio(periodo){
+    periodoRelatorioAtual = periodo;
+    document.getElementById('repTabDia').classList.toggle('selected', periodo==='dia');
+    document.getElementById('repTabSemana').classList.toggle('selected', periodo==='semana');
+    document.getElementById('repTabMes').classList.toggle('selected', periodo==='mes');
+    renderRelatorio(periodo);
+  }
+
+  function renderRelatorio(periodo){
+    const txs = transacoes.filter(t => dentroPeriodo(t.dateKey, periodo));
+    const totalEntradas = txs.filter(t=>t.tipo==='entrada').reduce((s,t)=>s+t.valor,0);
+    const totalSaidas = txs.filter(t=>t.tipo==='saida').reduce((s,t)=>s+t.valor,0);
+    const totalProdutos = txs.filter(t=>t.tipo==='entrada' && t.categoria==='venda').reduce((s,t)=>s+t.valor,0);
+    const totalMaquina = txs.filter(t=>t.tipo==='entrada' && t.categoria==='maquina').reduce((s,t)=>s+t.valor,0);
+
+    const pagXitique = pagamentos.filter(p=>dentroPeriodo(p.dateKey, periodo)).reduce((s,p)=>s+p.valor,0);
+    const entXitique = entregas.filter(e=>dentroPeriodo(e.dateKey, periodo)).reduce((s,e)=>s+e.valor,0);
+
+    const guardadoPoupanca = movimentosPoupanca.filter(m=>m.tipo==='deposito' && dentroPeriodo(m.dateKey, periodo)).reduce((s,m)=>s+m.valor,0);
+    const retiradoPoupanca = movimentosPoupanca.filter(m=>m.tipo==='retirada' && dentroPeriodo(m.dateKey, periodo)).reduce((s,m)=>s+m.valor,0);
+
+    const html = `
+      <div class="report-section-title">Caixa do Dia</div>
+      <div class="report-row"><span class="r-label">Entradas</span><span class="r-valor">${formatMoney(totalEntradas)} MT</span></div>
+      <div class="report-row"><span class="r-label">🧺 Produtos</span><span class="r-valor">${formatMoney(totalProdutos)} MT</span></div>
+      <div class="report-row"><span class="r-label">⚙️ Máquina</span><span class="r-valor">${formatMoney(totalMaquina)} MT</span></div>
+      <div class="report-row"><span class="r-label">Saídas</span><span class="r-valor">${formatMoney(totalSaidas)} MT</span></div>
+
+      <div class="report-section-title">Xitique</div>
+      <div class="report-row"><span class="r-label">Recebido dos participantes</span><span class="r-valor">${formatMoney(pagXitique)} MT</span></div>
+      <div class="report-row"><span class="r-label">Entregue</span><span class="r-valor">${formatMoney(entXitique)} MT</span></div>
+
+      <div class="report-section-title">Poupança</div>
+      <div class="report-row"><span class="r-label">Guardado</span><span class="r-valor">${formatMoney(guardadoPoupanca)} MT</span></div>
+      <div class="report-row"><span class="r-label">Retirado</span><span class="r-valor">${formatMoney(retiradoPoupanca)} MT</span></div>
+    `;
+    document.getElementById('reportBody').innerHTML = html;
   }
 </script>
 
