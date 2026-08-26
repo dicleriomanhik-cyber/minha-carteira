@@ -1,0 +1,17 @@
+{
+  "name": "Minha Carteira — Gestão Financeira",
+  "short_name": "Minha Carteira",
+  "description": "Caixa do Dia, Xitique e Poupança num só lugar. Funciona 100% offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#16223A",
+  "theme_color": "#16223A",
+  "orientation": "portrait",
+  "lang": "pt-MZ",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
