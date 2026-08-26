@@ -54,13 +54,18 @@
     min-height: 100vh;
     display:flex;
     flex-direction:column;
-    padding-bottom: 118px;
+    padding-bottom: 92px;
   }
   .topbar{
     padding: 22px 20px 8px;
     display:flex;
-    align-items:baseline;
+    align-items:center;
     gap:10px;
+  }
+  .topbar .brand{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
   }
   .topbar .mark{
     font-family:'Fraunces', serif;
@@ -70,6 +75,12 @@
     letter-spacing: 0.2px;
   }
   .topbar .mark span{ color: var(--gold); }
+  .topbar .brand-footer{
+    color: var(--paper);
+    font-size: 13px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:400;
+  }
   .topbar .date{
     color: rgba(251,243,228,0.55);
     font-size: 13px;
@@ -110,24 +121,11 @@
 
   main{ padding: 6px 16px 0; flex:1; }
 
-  .bottom-bar{
-    position: fixed;
-    bottom: 0; left:0; right:0;
-    max-width: 480px;
-    margin: 0 auto;
-    display:flex;
-    flex-direction:column;
-  }
   .app-footer{
     text-align:center;
-    padding: 8px 20px calc(8px + env(safe-area-inset-bottom));
-    font-size: 13px;
-    font-weight: 500;
-    font-family: 'IBM Plex Sans', sans-serif;
-    letter-spacing: normal;
+    padding: 26px 20px 10px;
+    font-size: 12px;
   }
-  .app-footer .footer-smart{ color: rgba(251,243,228,0.72); }
-  .app-footer .footer-metrics{ color: var(--gold); }
   .app-footer a{
     color: #6FA8DC;
     text-decoration:none;
@@ -527,12 +525,16 @@
 
   /* TABBAR */
   .tabbar{
-    display:flex;
-    padding: 10px 10px 6px;
-    gap: 6px;
+    position: fixed;
+    bottom: 0; left:0; right:0;
+    max-width: 480px;
+    margin: 0 auto;
     background: rgba(20,31,53,0.92);
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(251,243,228,0.08);
+    display:flex;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    gap: 6px;
   }
   .tab{
     flex:1;
@@ -679,7 +681,10 @@
 
 <div id="app">
   <div class="topbar">
-    <div class="mark">Minha<span>Carteira</span></div>
+    <div class="brand">
+      <div class="mark">Minha<span>Carteira</span></div>
+      <div class="brand-footer">Powered by SmartMetrics</div>
+    </div>
     <div class="date" id="dataHoje"></div>
     <button class="config-btn" onclick="openConfigModal()" aria-label="Definições e backup">⚙️</button>
   </div>
@@ -776,14 +781,11 @@
 
   </main>
 
-  <div class="bottom-bar">
-    <nav class="tabbar">
-      <button class="tab active" id="tabBtnCaixa" onclick="switchView('caixa')">🗂<span>Caixa do Dia</span></button>
-      <button class="tab" id="tabBtnXitique" onclick="switchView('xitique')">🤝<span>Xitique</span></button>
-      <button class="tab" id="tabBtnPoupanca" onclick="switchView('poupanca')">🐷<span>Poupança</span></button>
-    </nav>
-    <footer class="app-footer">Powered by <span class="footer-smart">Smart</span><span class="footer-metrics">Metrics</span></footer>
-  </div>
+  <nav class="tabbar">
+    <button class="tab active" id="tabBtnCaixa" onclick="switchView('caixa')">🗂<span>Caixa do Dia</span></button>
+    <button class="tab" id="tabBtnXitique" onclick="switchView('xitique')">🤝<span>Xitique</span></button>
+    <button class="tab" id="tabBtnPoupanca" onclick="switchView('poupanca')">🐷<span>Poupança</span></button>
+  </nav>
 </div>
 
 <div id="modalOverlay" class="modal-overlay" hidden>
