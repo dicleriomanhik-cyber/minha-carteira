@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minha-carteira-v1';
+const CACHE_NAME = 'minha-carteira-v2';
 const ASSETS = [
   './',
   './manifest.json',
