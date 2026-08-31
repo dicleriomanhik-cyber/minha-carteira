@@ -2,7 +2,7 @@
 <html lang="pt-MZ">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Minha Carteira</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16223A">
@@ -319,7 +319,13 @@
     align-items:center;
   }
   .history-item .h-date{ color: var(--paper); font-size: 13px; font-weight:600; text-transform:capitalize; }
+  .history-item .h-right{ display:flex; align-items:center; gap:10px; }
   .history-item .h-saldo{ font-family:'IBM Plex Mono', monospace; color: var(--gold); font-size: 14px; font-weight:600; }
+  .history-item .h-del{
+    background:none; border:none; color: rgba(251,243,228,0.5);
+    font-size: 15px; opacity:0.7; cursor:pointer; padding: 4px 2px; line-height:1;
+  }
+  .history-item .h-del:active{ opacity: 1; color: var(--coral-deep); }
 
   /* VIEWS */
 
@@ -554,12 +560,17 @@
   /* MODAL */
   .modal-overlay{
     position: fixed; inset:0;
+    height: calc(var(--app-vh, 1vh) * 100);
     background: rgba(10,15,26,0.6);
     display:flex; align-items:flex-end; justify-content:center;
     z-index: 50;
+    overflow:hidden;
   }
   .modal{
     width:100%; max-width: 480px;
+    max-height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: var(--paper);
     border-radius: 22px 22px 0 0;
     padding: 22px 20px calc(22px + env(safe-area-inset-bottom));
@@ -914,6 +925,28 @@
 </div>
 
 <script>
+  /* ==================== ALTURA REAL DO ECRÃ (corrige teclado a tapar os modais) ====================
+     Em alguns telemóveis/navegadores, quando o teclado abre, a "100vh" não muda e o
+     modal (que está encostado ao fundo da página inteira) fica escondido atrás do
+     teclado. Aqui usamos a visualViewport (quando existe) para saber a altura real
+     visível e aplicá-la ao overlay do modal via a variável --app-vh. */
+  function ajustarAlturaReal(){
+    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    document.documentElement.style.setProperty('--app-vh', (h * 0.01) + 'px');
+  }
+  ajustarAlturaReal();
+  window.addEventListener('resize', ajustarAlturaReal);
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', ajustarAlturaReal);
+    window.visualViewport.addEventListener('scroll', ajustarAlturaReal);
+  }
+  // Segurança extra: garante que o campo em foco fica visível quando o teclado abre.
+  document.addEventListener('focusin', (e) => {
+    if (e.target.matches('.modal input, .modal textarea')){
+      setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250);
+    }
+  });
+
   const STORAGE_KEY = 'caixaDoDia_transacoes';
   const CATEGORIAS = {
     entrada: [
@@ -1216,9 +1249,24 @@
       const saldoDia = saldoFechamentoDia(k);
       return `<div class="history-item">
         <span class="h-date">${formatDataExtenso(dataObj)}</span>
-        <span class="h-saldo">${formatMoney(saldoDia)} MT</span>
+        <span class="h-right">
+          <span class="h-saldo">${formatMoney(saldoDia)} MT</span>
+          <button class="h-del" onclick="apagarDia('${k}')" aria-label="Apagar registos deste dia">✕</button>
+        </span>
       </div>`;
     }).join('');
+  }
+
+  function apagarDia(dk){
+    const [y,m,d] = dk.split('-').map(Number);
+    const dataObj = new Date(y, m-1, d);
+    if (!confirm(`Apagar todos os registos de ${formatDataExtenso(dataObj)}? Esta ação não pode ser desfeita.`)) return;
+    transacoes = transacoes.filter(t=>t.dateKey!==dk);
+    delete saldoInicialMap[dk];
+    salvarStorage();
+    salvarSaldoInicialStorage();
+    render();
+    renderHistory();
   }
 
   function escapeHtml(str){
