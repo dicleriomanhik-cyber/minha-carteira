@@ -2,7 +2,7 @@
 <html lang="pt-MZ">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Minha Carteira</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16223A">
@@ -295,6 +295,28 @@
     line-height:1.5;
   }
 
+  /* ALERTAS DASHBOARD */
+  .alert-banner-wrap{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .alert-banner{
+    display:flex; align-items:center; gap:9px;
+    background: rgba(217,86,79,0.14);
+    border: 1px solid rgba(217,86,79,0.4);
+    color: #F3C9C6;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-size: 12.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'IBM Plex Sans', sans-serif;
+    text-align:left;
+    width:100%;
+  }
+  .alert-banner.stock{
+    background: rgba(231,169,61,0.14);
+    border-color: rgba(231,169,61,0.4);
+    color: var(--gold);
+  }
+
   /* HISTORY */
   .history{ margin: 16px 4px 10px; }
   .history-toggle{
@@ -319,7 +341,13 @@
     align-items:center;
   }
   .history-item .h-date{ color: var(--paper); font-size: 13px; font-weight:600; text-transform:capitalize; }
+  .history-item .h-right{ display:flex; align-items:center; gap:10px; }
   .history-item .h-saldo{ font-family:'IBM Plex Mono', monospace; color: var(--gold); font-size: 14px; font-weight:600; }
+  .history-item .h-del{
+    background:none; border:none; color: rgba(251,243,228,0.5);
+    font-size: 15px; opacity:0.7; cursor:pointer; padding: 4px 2px; line-height:1;
+  }
+  .history-item .h-del:active{ opacity: 1; color: var(--coral-deep); }
 
   /* VIEWS */
 
@@ -490,6 +518,34 @@
     line-height:1.5;
   }
 
+  /* FIADOS */
+  .fiado-hero{
+    background: linear-gradient(155deg, #3A1F1E, #241615 80%);
+    border: 1px solid rgba(217,86,79,0.32);
+  }
+  .fiado-hero .hero-amount span{ color: var(--coral); }
+  .fiado-hero .hero-sub .sub-saida b{ color: var(--coral); }
+  .fiado-badge{
+    display:inline-block;
+    font-size: 10px;
+    font-weight:700;
+    padding: 2px 7px;
+    border-radius:999px;
+    margin-left:6px;
+    vertical-align:middle;
+  }
+  .fiado-badge.vencido{ background: rgba(217,86,79,0.16); color: var(--coral-deep); }
+  .fiado-badge.amanha{ background: rgba(231,169,61,0.18); color: var(--gold-deep); }
+
+  /* STOCK / PRODUTOS */
+  .stock-hero{
+    background: linear-gradient(155deg, #2E2A18, #1D1A10 80%);
+    border: 1px solid rgba(231,169,61,0.32);
+  }
+  .stock-hero .hero-amount span{ color: var(--gold); }
+  .stock-hero .hero-sub b{ color: var(--gold); }
+  .produto-qtd-baixa{ color: var(--coral); font-weight:700; }
+
   .topbar .config-btn{
     background:none;
     border:none;
@@ -554,12 +610,17 @@
   /* MODAL */
   .modal-overlay{
     position: fixed; inset:0;
+    height: calc(var(--app-vh, 1vh) * 100);
     background: rgba(10,15,26,0.6);
     display:flex; align-items:flex-end; justify-content:center;
     z-index: 50;
+    overflow:hidden;
   }
   .modal{
     width:100%; max-width: 480px;
+    max-height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: var(--paper);
     border-radius: 22px 22px 0 0;
     padding: 22px 20px calc(22px + env(safe-area-inset-bottom));
@@ -596,6 +657,17 @@
     color: var(--ink);
   }
   .modal input#notaInput{ font-family:'IBM Plex Sans', sans-serif; font-size:14px; }
+  .modal select{
+    width:100%;
+    border: 1px solid var(--line-paper);
+    background: #fff;
+    border-radius: 12px;
+    padding: 13px 14px;
+    font-size: 14px;
+    font-family:'IBM Plex Sans', sans-serif;
+    color: var(--ink);
+  }
+  .modal .field-hint{ font-size:11.5px; color: var(--ink-soft); margin: -8px 0 4px; line-height:1.4; }
   .modal-actions{ display:flex; gap:10px; margin-top:20px; }
   .modal-actions button{
     flex:1;
@@ -695,6 +767,7 @@
 
   <main>
     <div id="view-caixa" class="view">
+      <div id="alertBannerWrap" class="alert-banner-wrap" hidden></div>
       <section class="hero-card">
         <button class="saldo-inicial-row" id="saldoInicialRow" onclick="openSaldoInicialModal()">
           <span>Saldo inicial de hoje: <b id="saldoInicialValor">0,00 MT</b></span>
@@ -714,6 +787,10 @@
           <div class="split-item">
             <div class="split-label">⚙️ Máquina</div>
             <div class="split-valor" id="totalMaquinaHoje">0,00 MT</div>
+          </div>
+          <div class="split-item">
+            <div class="split-label">📈 Lucro Real</div>
+            <div class="split-valor" id="lucroRealHojeMini">0,00 MT</div>
           </div>
         </div>
       </section>
@@ -779,10 +856,54 @@
       <div id="emptyPoupanca" class="empty-state-dark">Ainda não guardaste nada.<br>Toca em "+ Guardar da Caixa" para começar a tua poupança.</div>
     </div>
 
+    <div id="view-fiados" class="view" hidden>
+      <section class="hero-card fiado-hero">
+        <p class="hero-label">Total em Fiado · Por Receber</p>
+        <p class="hero-amount" id="totalFiadoDevido">0,00<span>MT</span></p>
+        <div class="hero-sub">
+          <span>Devedores <b id="qtdDevedores">0</b></span>
+          <span class="sub-saida">Vencidos <b id="qtdFiadoVencidos">0</b></span>
+        </div>
+      </section>
+
+      <div class="section-title">
+        Quem Deve
+        <button class="btn-add-participante" onclick="openFiadoModal()">+ Fiado</button>
+      </div>
+      <div id="listaFiados" class="participant-list"></div>
+      <div id="emptyFiados" class="empty-state-dark">Ainda não há fiados registados.<br>Toca em "+ Fiado" para começar o teu livro de crédito.</div>
+
+      <section class="history">
+        <button class="history-toggle" onclick="toggleHistoryFiados()" id="historyToggleBtnFiados">Ver fiados já pagos ▾</button>
+        <div id="historyListFiados" class="history-list" hidden></div>
+      </section>
+    </div>
+
+    <div id="view-produtos" class="view" hidden>
+      <section class="hero-card stock-hero">
+        <p class="hero-label">Lucro Real de Hoje</p>
+        <p class="hero-amount" id="lucroRealHoje">0,00<span>MT</span></p>
+        <div class="hero-sub">
+          <span>Vendeste <b id="receitaStockHoje">0,00</b></span>
+          <span>Custo da mercadoria <b id="custoStockHoje">0,00</b></span>
+        </div>
+      </section>
+      <p class="goal-hint" style="text-align:left;margin:10px 2px 0;">Só entra aqui o que vendes com "Produto do stock" ligado, na Nova Entrada ou num Fiado.</p>
+
+      <div class="section-title">
+        Produtos em Stock
+        <button class="btn-add-participante" onclick="openProdutoModal()">+ Produto</button>
+      </div>
+      <div id="listaProdutos" class="participant-list"></div>
+      <div id="emptyProdutos" class="empty-state-dark">Ainda não há produtos registados.<br>Toca em "+ Produto" para começar a controlar o teu stock.</div>
+    </div>
+
   </main>
 
   <nav class="tabbar">
-    <button class="tab active" id="tabBtnCaixa" onclick="switchView('caixa')">🗂<span>Caixa do Dia</span></button>
+    <button class="tab active" id="tabBtnCaixa" onclick="switchView('caixa')">🗂<span>Caixa</span></button>
+    <button class="tab" id="tabBtnFiados" onclick="switchView('fiados')">📒<span>Fiados</span></button>
+    <button class="tab" id="tabBtnProdutos" onclick="switchView('produtos')">📦<span>Stock</span></button>
     <button class="tab" id="tabBtnXitique" onclick="switchView('xitique')">🤝<span>Xitique</span></button>
     <button class="tab" id="tabBtnPoupanca" onclick="switchView('poupanca')">🐷<span>Poupança</span></button>
   </nav>
@@ -792,6 +913,14 @@
   <div class="modal">
     <h3 id="modalTitle">Nova Entrada</h3>
     <div id="categoryChips" class="chips"></div>
+    <div id="vendaStockWrap" hidden>
+      <label>Produto do stock (opcional)</label>
+      <select id="vendaProdutoSelect" onchange="onVendaProdutoChange()"></select>
+      <div id="vendaQtdWrap" hidden>
+        <label>Quantidade Vendida</label>
+        <input id="vendaQtdInput" type="number" inputmode="numeric" min="1" step="1" value="1" oninput="recalcularValorVenda()">
+      </div>
+    </div>
     <label>Valor (MT)</label>
     <input id="valorInput" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01">
     <label>Nota (opcional)</label>
@@ -898,6 +1027,87 @@
   </div>
 </div>
 
+<div id="modalFiado" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3>+ Fiado</h3>
+    <label>Nome do Cliente</label>
+    <input id="fiadoClienteInput" type="text" placeholder="Ex: Dona Berta" maxlength="30" list="listaClientesFiado">
+    <datalist id="listaClientesFiado"></datalist>
+
+    <label>Produto do stock (opcional)</label>
+    <select id="fiadoProdutoStockSelect" onchange="onFiadoProdutoStockChange()"></select>
+    <div id="fiadoQtdWrap" hidden>
+      <label>Quantidade</label>
+      <input id="fiadoQtdInput" type="number" inputmode="numeric" min="1" step="1" value="1" oninput="recalcularValorFiado()">
+    </div>
+
+    <label>Produto / Descrição</label>
+    <input id="fiadoProdutoInput" type="text" placeholder="Ex: 3 latas de leite" maxlength="60">
+
+    <label>Valor Total (MT)</label>
+    <input id="fiadoValorTotalInput" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01">
+
+    <label>Valor Pago Agora / Sinal (MT)</label>
+    <input id="fiadoValorPagoInput" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01" value="0">
+
+    <label>Data de Vencimento</label>
+    <input id="fiadoVencimentoInput" type="date">
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeFiadoModal()">Cancelar</button>
+      <button class="btn-save" onclick="salvarFiado()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalReceberFiado" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3>Receber Pagamento</h3>
+    <p id="receberFiadoInfo" class="field-hint" style="margin-bottom:14px;"></p>
+    <label>Valor Recebido (MT)</label>
+    <input id="valorReceberFiadoInput" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeReceberFiadoModal()">Cancelar</button>
+      <button class="btn-save" onclick="confirmarReceberFiado()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalProduto" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="tituloProduto">+ Produto</h3>
+    <label>Nome do Produto</label>
+    <input id="produtoNomeInput" type="text" placeholder="Ex: Açúcar (saco 50kg)" maxlength="40">
+    <label>Quantidade em Stock</label>
+    <input id="produtoQtdInput" type="number" inputmode="numeric" placeholder="0" min="0" step="1">
+    <label>Preço de Custo — por unidade (MT)</label>
+    <input id="produtoCustoInput" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01">
+    <label>Preço de Venda — por unidade (MT)</label>
+    <input id="produtoVendaInput" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01">
+    <label>Alertar quando o stock chegar a</label>
+    <input id="produtoAlertaInput" type="number" inputmode="numeric" placeholder="3" min="0" step="1" value="3">
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnApagarProduto" onclick="apagarProdutoAtual()" hidden>Apagar</button>
+      <button class="btn-cancel" onclick="closeProdutoModal()">Cancelar</button>
+      <button class="btn-save" onclick="salvarProduto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalRepor" class="modal-overlay" hidden>
+  <div class="modal">
+    <h3 id="tituloRepor">Repor Stock</h3>
+    <label>Quantidade a Adicionar</label>
+    <input id="reporQtdInput" type="number" inputmode="numeric" placeholder="0" min="1" step="1">
+    <label>Novo Preço de Custo — opcional (MT)</label>
+    <input id="reporCustoInput" type="number" inputmode="decimal" placeholder="deixa em branco para manter o atual" min="0" step="0.01">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeReporModal()">Cancelar</button>
+      <button class="btn-save" onclick="confirmarRepor()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modalRelatorio" class="modal-overlay" hidden>
   <div class="modal">
     <h3 id="tituloRelatorio">Relatório</h3>
@@ -914,6 +1124,28 @@
 </div>
 
 <script>
+  /* ==================== ALTURA REAL DO ECRÃ (corrige teclado a tapar os modais) ====================
+     Em alguns telemóveis/navegadores, quando o teclado abre, a "100vh" não muda e o
+     modal (que está encostado ao fundo da página inteira) fica escondido atrás do
+     teclado. Aqui usamos a visualViewport (quando existe) para saber a altura real
+     visível e aplicá-la ao overlay do modal via a variável --app-vh. */
+  function ajustarAlturaReal(){
+    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    document.documentElement.style.setProperty('--app-vh', (h * 0.01) + 'px');
+  }
+  ajustarAlturaReal();
+  window.addEventListener('resize', ajustarAlturaReal);
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', ajustarAlturaReal);
+    window.visualViewport.addEventListener('scroll', ajustarAlturaReal);
+  }
+  // Segurança extra: garante que o campo em foco fica visível quando o teclado abre.
+  document.addEventListener('focusin', (e) => {
+    if (e.target.matches('.modal input, .modal textarea')){
+      setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 250);
+    }
+  });
+
   const STORAGE_KEY = 'caixaDoDia_transacoes';
   const CATEGORIAS = {
     entrada: [
@@ -930,9 +1162,19 @@
   };
   const CAT_LOOKUP = [...CATEGORIAS.entrada, ...CATEGORIAS.saida].reduce((acc,c)=>{acc[c.id]=c; return acc;},{});
   CAT_LOOKUP['poupanca'] = { id:'poupanca', label:'Para Poupança', icon:'🐷' };
+  CAT_LOOKUP['fiado_recebido'] = { id:'fiado_recebido', label:'Fiado Recebido', icon:'📒' };
+  CAT_LOOKUP['fiado_sinal'] = { id:'fiado_sinal', label:'Sinal de Fiado', icon:'📒' };
 
   let transacoes = [];
   try { transacoes = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e){ transacoes = []; }
+
+  const STORAGE_FIADOS = 'caixaDoDia_fiados';
+  let fiados = [];
+  try { fiados = JSON.parse(localStorage.getItem(STORAGE_FIADOS)) || []; } catch(e){ fiados = []; }
+
+  const STORAGE_PRODUTOS = 'caixaDoDia_produtos';
+  let produtos = [];
+  try { produtos = JSON.parse(localStorage.getItem(STORAGE_PRODUTOS)) || []; } catch(e){ produtos = []; }
 
   let modalTipo = null;
   let categoriaSelecionada = null;
@@ -1009,7 +1251,9 @@
     'xitique_pagamentos',
     'xitique_entregas',
     'poupanca_movimentos',
-    'usuario_nome'
+    'usuario_nome',
+    'caixaDoDia_fiados',
+    'caixaDoDia_produtos'
   ];
 
   function exportarBackup(){
@@ -1072,6 +1316,12 @@
     return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   }
 
+  function formatDataCurta(dk){
+    if (!dk) return '—';
+    const [y,m,d] = dk.split('-');
+    return `${d}/${m}`;
+  }
+
   function salvarStorage(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(transacoes));
   }
@@ -1091,13 +1341,38 @@
         categoriaSelecionada = cat.id;
         [...chipsEl.children].forEach(c=>c.classList.remove('selected'));
         chip.classList.add('selected');
+        atualizarVendaStockWrap();
       };
       chipsEl.appendChild(chip);
     });
     document.getElementById('valorInput').value = '';
     document.getElementById('notaInput').value = '';
+    document.getElementById('vendaProdutoSelect').innerHTML = '<option value="">— Não descontar do stock —</option>' +
+      produtos.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} (stock: ${p.quantidade})</option>`).join('');
+    document.getElementById('vendaProdutoSelect').value = '';
+    document.getElementById('vendaQtdInput').value = '1';
+    document.getElementById('vendaQtdWrap').hidden = true;
+    atualizarVendaStockWrap();
     document.getElementById('modalOverlay').hidden = false;
     setTimeout(()=>document.getElementById('valorInput').focus(), 50);
+  }
+
+  function atualizarVendaStockWrap(){
+    document.getElementById('vendaStockWrap').hidden = !(modalTipo === 'entrada' && categoriaSelecionada === 'venda');
+  }
+
+  function onVendaProdutoChange(){
+    const sel = document.getElementById('vendaProdutoSelect');
+    document.getElementById('vendaQtdWrap').hidden = !sel.value;
+    if (sel.value) recalcularValorVenda();
+  }
+
+  function recalcularValorVenda(){
+    const sel = document.getElementById('vendaProdutoSelect');
+    const p = produtos.find(x=>x.id===sel.value);
+    if (!p) return;
+    const qtd = parseInt(document.getElementById('vendaQtdInput').value) || 1;
+    document.getElementById('valorInput').value = (qtd * p.precoVenda).toFixed(2);
   }
 
   function closeModal(){
@@ -1114,9 +1389,29 @@
       alert('Introduz um valor válido.');
       return;
     }
-    const nota = document.getElementById('notaInput').value.trim();
+    let nota = document.getElementById('notaInput').value.trim();
+    let produtoId = null, quantidadeVenda = null, custoTotalVenda = 0;
+
+    if (categoriaSelecionada === 'venda'){
+      const sel = document.getElementById('vendaProdutoSelect');
+      if (sel.value){
+        const p = produtos.find(x=>x.id===sel.value);
+        if (!p){ alert('Esse produto já não existe no stock.'); return; }
+        quantidadeVenda = parseInt(document.getElementById('vendaQtdInput').value) || 1;
+        if (quantidadeVenda > p.quantidade){
+          alert(`Só tens ${p.quantidade} unidades de "${p.nome}" em stock.`);
+          return;
+        }
+        produtoId = p.id;
+        custoTotalVenda = quantidadeVenda * p.precoCusto;
+        p.quantidade -= quantidadeVenda;
+        salvarProdutosStorage();
+        nota = nota ? `${p.nome} x${quantidadeVenda} · ${nota}` : `${p.nome} x${quantidadeVenda}`;
+      }
+    }
+
     const agora = Date.now();
-    transacoes.push({
+    const tx = {
       id: agora + '-' + Math.random().toString(36).slice(2,7),
       tipo: modalTipo,
       categoria: categoriaSelecionada,
@@ -1124,7 +1419,13 @@
       nota: nota,
       timestamp: agora,
       dateKey: HOJE_KEY
-    });
+    };
+    if (produtoId){
+      tx.produtoId = produtoId;
+      tx.quantidade = quantidadeVenda;
+      tx.custoTotal = custoTotalVenda;
+    }
+    transacoes.push(tx);
     salvarStorage();
     closeModal();
     render();
@@ -1132,6 +1433,11 @@
 
   function apagar(id){
     if (!confirm('Apagar este registo?')) return;
+    const t = transacoes.find(x=>x.id===id);
+    if (t && t.produtoId){
+      const p = produtos.find(x=>x.id===t.produtoId);
+      if (p){ p.quantidade += (t.quantidade||0); salvarProdutosStorage(); }
+    }
     transacoes = transacoes.filter(t=>t.id!==id);
     salvarStorage();
     render();
@@ -1165,6 +1471,8 @@
     const totalMaquinaHoje = doHoje.filter(t=>t.tipo==='entrada' && t.categoria==='maquina').reduce((s,t)=>s+t.valor,0);
     document.getElementById('totalProdutosHoje').textContent = formatMoney(totalProdutosHoje) + ' MT';
     document.getElementById('totalMaquinaHoje').textContent = formatMoney(totalMaquinaHoje) + ' MT';
+    document.getElementById('lucroRealHojeMini').textContent = formatMoney(lucroRealHojeCalc().lucro) + ' MT';
+    renderAlertBanner();
 
     const linhaInicial = document.getElementById('saldoInicialRow');
     const definido = saldoInicialDefinidoHoje();
@@ -1216,9 +1524,24 @@
       const saldoDia = saldoFechamentoDia(k);
       return `<div class="history-item">
         <span class="h-date">${formatDataExtenso(dataObj)}</span>
-        <span class="h-saldo">${formatMoney(saldoDia)} MT</span>
+        <span class="h-right">
+          <span class="h-saldo">${formatMoney(saldoDia)} MT</span>
+          <button class="h-del" onclick="apagarDia('${k}')" aria-label="Apagar registos deste dia">✕</button>
+        </span>
       </div>`;
     }).join('');
+  }
+
+  function apagarDia(dk){
+    const [y,m,d] = dk.split('-').map(Number);
+    const dataObj = new Date(y, m-1, d);
+    if (!confirm(`Apagar todos os registos de ${formatDataExtenso(dataObj)}? Esta ação não pode ser desfeita.`)) return;
+    transacoes = transacoes.filter(t=>t.dateKey!==dk);
+    delete saldoInicialMap[dk];
+    salvarStorage();
+    salvarSaldoInicialStorage();
+    render();
+    renderHistory();
   }
 
   function escapeHtml(str){
@@ -1240,10 +1563,14 @@
     document.querySelectorAll('.view').forEach(v => v.hidden = true);
     document.getElementById('view-' + view).hidden = false;
     document.getElementById('tabBtnCaixa').classList.toggle('active', view === 'caixa');
+    document.getElementById('tabBtnFiados').classList.toggle('active', view === 'fiados');
+    document.getElementById('tabBtnProdutos').classList.toggle('active', view === 'produtos');
     document.getElementById('tabBtnXitique').classList.toggle('active', view === 'xitique');
     document.getElementById('tabBtnPoupanca').classList.toggle('active', view === 'poupanca');
     if (view === 'xitique') renderXitique();
     if (view === 'poupanca') renderPoupanca();
+    if (view === 'fiados') renderFiados();
+    if (view === 'produtos') renderProdutos();
   }
 
   /* ==================== XITIQUE ==================== */
@@ -1433,9 +1760,19 @@
       const d = new Date(e.timestamp);
       return `<div class="history-item">
         <span class="h-date">${formatDataExtenso(d)}${e.nota ? ' · ' + escapeHtml(e.nota) : ''}</span>
-        <span class="h-saldo">${formatMoney(e.valor)} MT</span>
+        <span class="h-right">
+          <span class="h-saldo">${formatMoney(e.valor)} MT</span>
+          <button class="h-del" onclick="apagarEntrega('${e.id}')" aria-label="Apagar entrega">✕</button>
+        </span>
       </div>`;
     }).join('');
+  }
+
+  function apagarEntrega(id){
+    if (!confirm('Apagar esta entrega do Xitique? O valor volta a contar como guardado.')) return;
+    entregas = entregas.filter(e=>e.id!==id);
+    salvarXitiqueStorage();
+    renderXitique();
   }
 
   function renderXitique(){
@@ -1508,9 +1845,10 @@
       return;
     }
     const agora = Date.now();
+    const txId = agora + '-' + Math.random().toString(36).slice(2,7);
     // Regista a saída correspondente no Caixa do Dia, para o Saldo na Mão refletir a realidade
     transacoes.push({
-      id: agora + '-' + Math.random().toString(36).slice(2,7),
+      id: txId,
       tipo: 'saida',
       categoria: 'poupanca',
       valor: valor,
@@ -1525,10 +1863,25 @@
       valor: valor,
       nota: nota,
       timestamp: agora,
-      dateKey: HOJE_KEY
+      dateKey: HOJE_KEY,
+      txId: txId
     });
     salvarPoupancaStorage();
     closeGuardarModal();
+    renderPoupanca();
+    render();
+  }
+
+  function apagarMovimentoPoupanca(id){
+    const m = movimentosPoupanca.find(x=>x.id===id);
+    if (!m) return;
+    if (!confirm('Apagar este movimento da Poupança?')) return;
+    if (m.tipo === 'deposito' && m.txId){
+      transacoes = transacoes.filter(t=>t.id!==m.txId);
+      salvarStorage();
+    }
+    movimentosPoupanca = movimentosPoupanca.filter(x=>x.id!==id);
+    salvarPoupancaStorage();
     renderPoupanca();
     render();
   }
@@ -1595,6 +1948,460 @@
             <div class="participant-valor">${formatDataExtenso(d)} · ${formatHora(m.timestamp)}</div>
           </div>
           <div class="entry-amount ${m.tipo === 'deposito' ? 'pos' : 'neg'}">${m.tipo === 'deposito' ? '+' : '−'} ${formatMoney(m.valor)}</div>
+          <button class="participant-del" onclick="apagarMovimentoPoupanca('${m.id}')" aria-label="Apagar movimento">✕</button>
+        `;
+        lista.appendChild(row);
+      });
+    }
+  }
+
+  /* ==================== FIADOS (LIVRO DE CRÉDITO) ==================== */
+  let historyFiadosOpen = false;
+  let fiadoReceberAtualId = null;
+
+  function salvarFiadosStorage(){
+    localStorage.setItem(STORAGE_FIADOS, JSON.stringify(fiados));
+  }
+
+  function saldoFiado(f){
+    return Math.max(0, Math.round(((f.valorTotal||0) - (f.valorPago||0)) * 100) / 100);
+  }
+
+  function amanhaKey(){
+    return dateKey(new Date(Date.now() + 86400000));
+  }
+
+  function statusFiado(f){
+    if (saldoFiado(f) <= 0) return 'pago';
+    if (f.vencimento && f.vencimento < HOJE_KEY) return 'vencido';
+    if (f.vencimento === amanhaKey()) return 'amanha';
+    return 'ok';
+  }
+
+  function nomesClientesFiado(){
+    return [...new Set(fiados.map(f=>f.cliente))].sort();
+  }
+
+  function openFiadoModal(){
+    document.getElementById('fiadoClienteInput').value = '';
+    document.getElementById('fiadoProdutoInput').value = '';
+    document.getElementById('fiadoValorTotalInput').value = '';
+    document.getElementById('fiadoValorPagoInput').value = '0';
+    document.getElementById('fiadoQtdInput').value = '1';
+    document.getElementById('fiadoQtdWrap').hidden = true;
+
+    const dl = document.getElementById('listaClientesFiado');
+    dl.innerHTML = nomesClientesFiado().map(n=>`<option value="${escapeHtml(n)}">`).join('');
+
+    const sel = document.getElementById('fiadoProdutoStockSelect');
+    sel.innerHTML = '<option value="">— Produto avulso (escreve abaixo) —</option>' +
+      produtos.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} (stock: ${p.quantidade})</option>`).join('');
+    sel.value = '';
+
+    document.getElementById('fiadoVencimentoInput').value = dateKey(new Date(Date.now() + 7*86400000));
+
+    document.getElementById('modalFiado').hidden = false;
+    setTimeout(()=>document.getElementById('fiadoClienteInput').focus(), 50);
+  }
+
+  function closeFiadoModal(){
+    document.getElementById('modalFiado').hidden = true;
+  }
+
+  function onFiadoProdutoStockChange(){
+    const sel = document.getElementById('fiadoProdutoStockSelect');
+    const wrap = document.getElementById('fiadoQtdWrap');
+    if (sel.value){
+      wrap.hidden = false;
+      const p = produtos.find(x=>x.id===sel.value);
+      if (p) document.getElementById('fiadoProdutoInput').value = p.nome;
+      recalcularValorFiado();
+    } else {
+      wrap.hidden = true;
+    }
+  }
+
+  function recalcularValorFiado(){
+    const sel = document.getElementById('fiadoProdutoStockSelect');
+    const p = produtos.find(x=>x.id===sel.value);
+    if (!p) return;
+    const qtd = parseInt(document.getElementById('fiadoQtdInput').value) || 1;
+    document.getElementById('fiadoValorTotalInput').value = (qtd * p.precoVenda).toFixed(2);
+  }
+
+  function registarRecebimentoFiado(fiado, valor, categoria, nota){
+    fiado.pagamentos.push({ valor, timestamp: Date.now() });
+    fiado.valorPago = Math.round(((fiado.valorPago||0) + valor) * 100) / 100;
+
+    const agora = Date.now();
+    const custoProporcional = fiado.custoTotal ? Math.round((fiado.custoTotal * (valor / fiado.valorTotal)) * 100) / 100 : 0;
+    const tx = {
+      id: agora + '-' + Math.random().toString(36).slice(2,7),
+      tipo: 'entrada',
+      categoria: categoria,
+      valor: valor,
+      nota: nota,
+      timestamp: agora,
+      dateKey: HOJE_KEY
+    };
+    if (fiado.produtoStockId && custoProporcional > 0){
+      tx.produtoId = fiado.produtoStockId;
+      tx.custoTotal = custoProporcional;
+    }
+    transacoes.push(tx);
+    salvarStorage();
+  }
+
+  function salvarFiado(){
+    const cliente = document.getElementById('fiadoClienteInput').value.trim();
+    const produtoStockId = document.getElementById('fiadoProdutoStockSelect').value;
+    const produtoDescricao = document.getElementById('fiadoProdutoInput').value.trim();
+    const valorTotal = parseFloat(document.getElementById('fiadoValorTotalInput').value);
+    let valorPago = parseFloat(document.getElementById('fiadoValorPagoInput').value);
+    const vencimento = document.getElementById('fiadoVencimentoInput').value;
+
+    if (!cliente){ alert('Introduz o nome do cliente.'); return; }
+    if (!produtoDescricao){ alert('Descreve o produto ou escolhe um do stock.'); return; }
+    if (!valorTotal || valorTotal <= 0){ alert('Introduz um valor total válido.'); return; }
+    if (isNaN(valorPago) || valorPago < 0) valorPago = 0;
+    if (valorPago > valorTotal){ alert('O valor pago agora não pode ser maior que o valor total.'); return; }
+    if (!vencimento){ alert('Escolhe a data de vencimento.'); return; }
+
+    let quantidade = null;
+    let custoTotal = 0;
+    if (produtoStockId){
+      const p = produtos.find(x=>x.id===produtoStockId);
+      if (!p){ alert('Esse produto já não existe no stock.'); return; }
+      quantidade = parseInt(document.getElementById('fiadoQtdInput').value) || 1;
+      if (quantidade > p.quantidade){
+        alert(`Só tens ${p.quantidade} unidades de "${p.nome}" em stock.`);
+        return;
+      }
+      custoTotal = quantidade * p.precoCusto;
+      p.quantidade -= quantidade;
+      salvarProdutosStorage();
+    }
+
+    const agora = Date.now();
+    const fiado = {
+      id: agora + '-' + Math.random().toString(36).slice(2,7),
+      cliente,
+      produto: produtoDescricao,
+      produtoStockId: produtoStockId || null,
+      quantidade,
+      custoTotal,
+      valorTotal,
+      valorPago: 0,
+      vencimento,
+      criadoEm: agora,
+      pagamentos: []
+    };
+    fiados.push(fiado);
+
+    if (valorPago > 0){
+      registarRecebimentoFiado(fiado, valorPago, 'fiado_sinal', 'Sinal - fiado ' + cliente);
+    }
+
+    salvarFiadosStorage();
+    closeFiadoModal();
+    renderFiados();
+    render();
+  }
+
+  function openReceberFiadoModal(id){
+    const f = fiados.find(x=>x.id===id);
+    if (!f) return;
+    fiadoReceberAtualId = id;
+    const devido = saldoFiado(f);
+    document.getElementById('receberFiadoInfo').textContent = `${f.cliente} deve ${formatMoney(devido)} MT (${f.produto}).`;
+    document.getElementById('valorReceberFiadoInput').value = devido.toFixed(2);
+    document.getElementById('modalReceberFiado').hidden = false;
+    setTimeout(()=>document.getElementById('valorReceberFiadoInput').focus(), 50);
+  }
+
+  function closeReceberFiadoModal(){
+    document.getElementById('modalReceberFiado').hidden = true;
+  }
+
+  function confirmarReceberFiado(){
+    const f = fiados.find(x=>x.id===fiadoReceberAtualId);
+    if (!f) return;
+    const valor = parseFloat(document.getElementById('valorReceberFiadoInput').value);
+    const devido = saldoFiado(f);
+    if (!valor || valor <= 0){ alert('Introduz um valor válido.'); return; }
+    if (valor > devido + 0.01){ alert('Esse valor é maior que a dívida (' + formatMoney(devido) + ' MT).'); return; }
+    registarRecebimentoFiado(f, valor, 'fiado_recebido', 'Pagamento de fiado - ' + f.cliente);
+    salvarFiadosStorage();
+    closeReceberFiadoModal();
+    renderFiados();
+    render();
+  }
+
+  function apagarFiado(id){
+    const f = fiados.find(x=>x.id===id);
+    if (!f) return;
+    if (!confirm(`Apagar o fiado de "${f.cliente}" (${f.produto})? Os pagamentos já recebidos continuam no Caixa do Dia.`)) return;
+    if (f.produtoStockId && f.quantidade){
+      const p = produtos.find(x=>x.id===f.produtoStockId);
+      if (p){ p.quantidade += f.quantidade; salvarProdutosStorage(); }
+    }
+    fiados = fiados.filter(x=>x.id!==id);
+    salvarFiadosStorage();
+    renderFiados();
+    renderProdutos();
+  }
+
+  function verDetalheFiado(id){
+    const f = fiados.find(x=>x.id===id);
+    if (!f) return;
+    const devido = saldoFiado(f);
+    alert(`${f.cliente}\nProduto: ${f.produto}\nValor Total: ${formatMoney(f.valorTotal)} MT\nJá pago: ${formatMoney(f.valorPago)} MT\nFalta pagar: ${formatMoney(devido)} MT\nVencimento: ${formatDataCurta(f.vencimento)}`);
+  }
+
+  function toggleHistoryFiados(){
+    historyFiadosOpen = !historyFiadosOpen;
+    document.getElementById('historyListFiados').hidden = !historyFiadosOpen;
+    document.getElementById('historyToggleBtnFiados').textContent = historyFiadosOpen ? 'Esconder fiados pagos ▴' : 'Ver fiados já pagos ▾';
+    if (historyFiadosOpen) renderHistoryFiadosPagos();
+  }
+
+  function renderHistoryFiadosPagos(){
+    const pagos = fiados.filter(f=>saldoFiado(f)<=0).sort((a,b)=>b.criadoEm-a.criadoEm);
+    const el = document.getElementById('historyListFiados');
+    if (pagos.length === 0){
+      el.innerHTML = '<div class="empty-state" style="color:rgba(251,243,228,0.5)">Sem fiados pagos ainda.</div>';
+      return;
+    }
+    el.innerHTML = pagos.map(f=>`
+      <div class="history-item">
+        <span class="h-date">${escapeHtml(f.cliente)} · ${escapeHtml(f.produto)}</span>
+        <span class="h-right">
+          <span class="h-saldo">${formatMoney(f.valorTotal)} MT</span>
+          <button class="h-del" onclick="apagarFiado('${f.id}')" aria-label="Apagar">✕</button>
+        </span>
+      </div>
+    `).join('');
+  }
+
+  function renderFiados(){
+    const ativos = fiados.filter(f=>saldoFiado(f) > 0);
+    const ordem = { vencido: 0, amanha: 1, ok: 2 };
+    ativos.sort((a,b)=>{
+      const sa = statusFiado(a), sb = statusFiado(b);
+      if (ordem[sa] !== ordem[sb]) return ordem[sa]-ordem[sb];
+      return (a.vencimento||'').localeCompare(b.vencimento||'');
+    });
+
+    const totalDevido = ativos.reduce((s,f)=>s+saldoFiado(f),0);
+    const vencidos = ativos.filter(f=>statusFiado(f)==='vencido').length;
+    document.getElementById('totalFiadoDevido').innerHTML = formatMoney(totalDevido) + '<span>MT</span>';
+    document.getElementById('qtdDevedores').textContent = ativos.length;
+    document.getElementById('qtdFiadoVencidos').textContent = vencidos;
+
+    const lista = document.getElementById('listaFiados');
+    const empty = document.getElementById('emptyFiados');
+    lista.innerHTML = '';
+    if (ativos.length === 0){
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      ativos.forEach(f=>{
+        const devido = saldoFiado(f);
+        const status = statusFiado(f);
+        const badge = status === 'vencido' ? '<span class="fiado-badge vencido">🔴 Vencido</span>'
+                    : status === 'amanha' ? '<span class="fiado-badge amanha">🟠 Vence amanhã</span>'
+                    : '';
+        const row = document.createElement('div');
+        row.className = 'participant-row';
+        row.innerHTML = `
+          <div class="participant-avatar">${iniciais(f.cliente)}</div>
+          <div class="participant-mid" onclick="verDetalheFiado('${f.id}')">
+            <div class="participant-name">${escapeHtml(f.cliente)}${badge}</div>
+            <div class="participant-valor">${escapeHtml(f.produto)} · deve ${formatMoney(devido)} MT · vence ${formatDataCurta(f.vencimento)}</div>
+          </div>
+          <button class="pago-btn" onclick="openReceberFiadoModal('${f.id}')">Receber</button>
+          <button class="participant-del" onclick="apagarFiado('${f.id}')" aria-label="Apagar fiado">✕</button>
+        `;
+        lista.appendChild(row);
+      });
+    }
+    if (historyFiadosOpen) renderHistoryFiadosPagos();
+  }
+
+  /* ==================== PRODUTOS / STOCK ==================== */
+  let editandoProdutoId = null;
+  let reporProdutoId = null;
+
+  function salvarProdutosStorage(){
+    localStorage.setItem(STORAGE_PRODUTOS, JSON.stringify(produtos));
+  }
+
+  function openProdutoModal(){
+    editandoProdutoId = null;
+    document.getElementById('tituloProduto').textContent = '+ Produto';
+    document.getElementById('produtoNomeInput').value = '';
+    document.getElementById('produtoQtdInput').value = '';
+    document.getElementById('produtoCustoInput').value = '';
+    document.getElementById('produtoVendaInput').value = '';
+    document.getElementById('produtoAlertaInput').value = '3';
+    document.getElementById('btnApagarProduto').hidden = true;
+    document.getElementById('modalProduto').hidden = false;
+    setTimeout(()=>document.getElementById('produtoNomeInput').focus(), 50);
+  }
+
+  function editarProduto(id){
+    const p = produtos.find(x=>x.id===id);
+    if (!p) return;
+    editandoProdutoId = id;
+    document.getElementById('tituloProduto').textContent = 'Editar Produto';
+    document.getElementById('produtoNomeInput').value = p.nome;
+    document.getElementById('produtoQtdInput').value = p.quantidade;
+    document.getElementById('produtoCustoInput').value = p.precoCusto;
+    document.getElementById('produtoVendaInput').value = p.precoVenda;
+    document.getElementById('produtoAlertaInput').value = (p.alertaEm !== undefined ? p.alertaEm : 3);
+    document.getElementById('btnApagarProduto').hidden = false;
+    document.getElementById('modalProduto').hidden = false;
+  }
+
+  function closeProdutoModal(){
+    document.getElementById('modalProduto').hidden = true;
+  }
+
+  function salvarProduto(){
+    const nome = document.getElementById('produtoNomeInput').value.trim();
+    const quantidade = parseInt(document.getElementById('produtoQtdInput').value);
+    const precoCusto = parseFloat(document.getElementById('produtoCustoInput').value);
+    const precoVenda = parseFloat(document.getElementById('produtoVendaInput').value);
+    const alertaEmRaw = parseInt(document.getElementById('produtoAlertaInput').value);
+    const alertaEm = isNaN(alertaEmRaw) ? 3 : alertaEmRaw;
+
+    if (!nome){ alert('Introduz o nome do produto.'); return; }
+    if (isNaN(quantidade) || quantidade < 0){ alert('Introduz uma quantidade válida.'); return; }
+    if (isNaN(precoCusto) || precoCusto < 0){ alert('Introduz um preço de custo válido.'); return; }
+    if (isNaN(precoVenda) || precoVenda < 0){ alert('Introduz um preço de venda válido.'); return; }
+
+    if (editandoProdutoId){
+      const p = produtos.find(x=>x.id===editandoProdutoId);
+      p.nome = nome;
+      p.quantidade = quantidade;
+      p.precoCusto = precoCusto;
+      p.precoVenda = precoVenda;
+      p.alertaEm = alertaEm;
+    } else {
+      produtos.push({
+        id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        nome, quantidade, precoCusto, precoVenda, alertaEm
+      });
+    }
+    salvarProdutosStorage();
+    closeProdutoModal();
+    renderProdutos();
+  }
+
+  function apagarProdutoAtual(){
+    if (!editandoProdutoId) return;
+    if (!confirm('Apagar este produto do stock? Isto não apaga vendas já registadas.')) return;
+    produtos = produtos.filter(x=>x.id!==editandoProdutoId);
+    salvarProdutosStorage();
+    closeProdutoModal();
+    renderProdutos();
+  }
+
+  function openReporModal(id){
+    const p = produtos.find(x=>x.id===id);
+    if (!p) return;
+    reporProdutoId = id;
+    document.getElementById('tituloRepor').textContent = 'Repor Stock — ' + p.nome;
+    document.getElementById('reporQtdInput').value = '';
+    document.getElementById('reporCustoInput').value = '';
+    document.getElementById('modalRepor').hidden = false;
+    setTimeout(()=>document.getElementById('reporQtdInput').focus(), 50);
+  }
+
+  function closeReporModal(){
+    document.getElementById('modalRepor').hidden = true;
+  }
+
+  function confirmarRepor(){
+    const p = produtos.find(x=>x.id===reporProdutoId);
+    if (!p) return;
+    const qtd = parseInt(document.getElementById('reporQtdInput').value);
+    const novoCusto = parseFloat(document.getElementById('reporCustoInput').value);
+    if (!qtd || qtd <= 0){ alert('Introduz uma quantidade válida.'); return; }
+    p.quantidade += qtd;
+    if (!isNaN(novoCusto) && novoCusto >= 0) p.precoCusto = novoCusto;
+    salvarProdutosStorage();
+    closeReporModal();
+    renderProdutos();
+  }
+
+  function lucroRealHojeCalc(){
+    const doHoje = transacoes.filter(t => t.dateKey === HOJE_KEY && t.tipo === 'entrada' && t.produtoId);
+    const receita = doHoje.reduce((s,t)=>s+t.valor,0);
+    const custo = doHoje.reduce((s,t)=>s+(t.custoTotal||0),0);
+    return { receita, custo, lucro: receita - custo };
+  }
+
+  function computeAlertas(){
+    const alertas = [];
+    const amanha = amanhaKey();
+    const ativos = fiados.filter(f => saldoFiado(f) > 0);
+    const vencidos = ativos.filter(f => f.vencimento && f.vencimento < HOJE_KEY);
+    const venceAmanha = ativos.filter(f => f.vencimento === amanha);
+    if (vencidos.length){
+      const total = vencidos.reduce((s,f)=>s+saldoFiado(f),0);
+      alertas.push({ tipo:'fiado', texto: `🔴 ${vencidos.length} fiado(s) vencido(s) — ${formatMoney(total)} MT por receber. Toca para ver.` });
+    }
+    if (venceAmanha.length){
+      const total = venceAmanha.reduce((s,f)=>s+saldoFiado(f),0);
+      alertas.push({ tipo:'fiado', texto: `🟠 ${venceAmanha.length} fiado(s) vence(m) amanhã — ${formatMoney(total)} MT. Toca para ver.` });
+    }
+    const baixos = produtos.filter(p => p.quantidade <= (p.alertaEm !== undefined ? p.alertaEm : 3));
+    if (baixos.length){
+      const nomes = baixos.slice(0,3).map(p=>p.nome).join(', ');
+      alertas.push({ tipo:'stock', texto: `📦 Stock baixo: ${nomes}${baixos.length>3 ? '…' : ''}. Toca para repor.` });
+    }
+    return alertas;
+  }
+
+  function renderAlertBanner(){
+    const wrap = document.getElementById('alertBannerWrap');
+    const alertas = computeAlertas();
+    if (alertas.length === 0){
+      wrap.hidden = true;
+      wrap.innerHTML = '';
+      return;
+    }
+    wrap.hidden = false;
+    wrap.innerHTML = alertas.map(a=>`
+      <button class="alert-banner ${a.tipo==='stock'?'stock':''}" onclick="switchView('${a.tipo==='stock'?'produtos':'fiados'}')">${a.texto}</button>
+    `).join('');
+  }
+
+  function renderProdutos(){
+    const { receita, custo, lucro } = lucroRealHojeCalc();
+    document.getElementById('lucroRealHoje').innerHTML = formatMoney(lucro) + '<span>MT</span>';
+    document.getElementById('receitaStockHoje').textContent = formatMoney(receita);
+    document.getElementById('custoStockHoje').textContent = formatMoney(custo);
+
+    const lista = document.getElementById('listaProdutos');
+    const empty = document.getElementById('emptyProdutos');
+    lista.innerHTML = '';
+    if (produtos.length === 0){
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      produtos.forEach(p=>{
+        const baixo = p.quantidade <= (p.alertaEm !== undefined ? p.alertaEm : 3);
+        const row = document.createElement('div');
+        row.className = 'participant-row';
+        row.innerHTML = `
+          <div class="participant-avatar">🧺</div>
+          <div class="participant-mid" onclick="editarProduto('${p.id}')">
+            <div class="participant-name">${escapeHtml(p.nome)}</div>
+            <div class="participant-valor ${baixo ? 'produto-qtd-baixa' : ''}">${baixo ? '⚠️ ' : ''}Stock: ${p.quantidade} · Custo ${formatMoney(p.precoCusto)} · Venda ${formatMoney(p.precoVenda)} MT</div>
+          </div>
+          <button class="pago-btn" onclick="openReporModal('${p.id}')">+ Repor</button>
         `;
         lista.appendChild(row);
       });
@@ -1679,12 +2486,28 @@
     const guardadoPoupanca = movimentosPoupanca.filter(m=>m.tipo==='deposito' && dentroPeriodo(m.dateKey, periodo)).reduce((s,m)=>s+m.valor,0);
     const retiradoPoupanca = movimentosPoupanca.filter(m=>m.tipo==='retirada' && dentroPeriodo(m.dateKey, periodo)).reduce((s,m)=>s+m.valor,0);
 
+    const recebidoFiados = txs.filter(t=>t.tipo==='entrada' && (t.categoria==='fiado_recebido' || t.categoria==='fiado_sinal')).reduce((s,t)=>s+t.valor,0);
+    const emAbertoFiados = fiados.filter(f=>saldoFiado(f)>0).reduce((s,f)=>s+saldoFiado(f),0);
+
+    const vendasComStock = txs.filter(t=>t.tipo==='entrada' && t.produtoId);
+    const receitaStock = vendasComStock.reduce((s,t)=>s+t.valor,0);
+    const custoStock = vendasComStock.reduce((s,t)=>s+(t.custoTotal||0),0);
+
     const html = `
       <div class="report-section-title">Caixa do Dia</div>
       <div class="report-row"><span class="r-label">Entradas</span><span class="r-valor">${formatMoney(totalEntradas)} MT</span></div>
       <div class="report-row"><span class="r-label">🧺 Produtos</span><span class="r-valor">${formatMoney(totalProdutos)} MT</span></div>
       <div class="report-row"><span class="r-label">⚙️ Máquina</span><span class="r-valor">${formatMoney(totalMaquina)} MT</span></div>
       <div class="report-row"><span class="r-label">Saídas</span><span class="r-valor">${formatMoney(totalSaidas)} MT</span></div>
+
+      <div class="report-section-title">Stock / Lucro Real</div>
+      <div class="report-row"><span class="r-label">Vendeste (ligado ao stock)</span><span class="r-valor">${formatMoney(receitaStock)} MT</span></div>
+      <div class="report-row"><span class="r-label">Custo da mercadoria</span><span class="r-valor">${formatMoney(custoStock)} MT</span></div>
+      <div class="report-row"><span class="r-label">Lucro real</span><span class="r-valor">${formatMoney(receitaStock-custoStock)} MT</span></div>
+
+      <div class="report-section-title">Fiados</div>
+      <div class="report-row"><span class="r-label">Recebido no período</span><span class="r-valor">${formatMoney(recebidoFiados)} MT</span></div>
+      <div class="report-row"><span class="r-label">Em aberto (total atual)</span><span class="r-valor">${formatMoney(emAbertoFiados)} MT</span></div>
 
       <div class="report-section-title">Xitique</div>
       <div class="report-row"><span class="r-label">Recebido dos participantes</span><span class="r-valor">${formatMoney(pagXitique)} MT</span></div>
