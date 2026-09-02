@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  /* Cor — paleta "caderno escolar" em azul claro (mesmo modelo do Sala Virtual) */
+  --bg: #F3F4F6;
+  --bg-soft: #E9EBEF;
+  --paper: #FFFFFF;
+  --paper-soft: #F4F8FE;
+  --ink: #16202E;
+  --ink-soft: #5B6472;
+  --cream: #16202E;
+  --cream-soft: #5B6472;
+  --mango: #1A73E8;
+  --mango-ink: #FFFFFF;
+  --mango-soft: #E8F0FE;
+  --teal: #1F7A6C;
+  --teal-soft: #E4F2EE;
+  --brick: #B5482F;
+  --brick-soft: #F7E7E2;
+  --amber: #7A4B0A;
+  --amber-soft: #FBEED9;
+
+  font-family: 'Public Sans', system-ui, sans-serif;
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-display {
+  font-family: 'Public Sans', system-ui, sans-serif;
+}
+
+.font-mono-ref {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--mango);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.campo {
+  width: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  border: 1px solid rgba(22,32,46,0.1);
+}
+.campo::placeholder { color: var(--ink-soft); }
+.campo:focus { border-color: var(--mango); outline: none; }
