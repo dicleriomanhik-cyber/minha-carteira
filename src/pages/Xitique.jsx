@@ -146,7 +146,7 @@ export default function Xitique() {
         onClick={abrirEntrega}
         className="mt-4 w-full rounded-xl bg-[var(--mango)] py-3 text-sm font-semibold text-[var(--mango-ink)] active:scale-[0.98]"
       >
-        📤 Registar Entrega do Xitique
+        Registar Entrega do Xitique
       </button>
 
       <section className="mt-4">

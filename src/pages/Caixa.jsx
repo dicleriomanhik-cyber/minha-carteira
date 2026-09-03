@@ -100,7 +100,7 @@ export default function Caixa() {
       <AlertBanner />
 
       <HeroCard
-        label="Saldo na Mão · Hoje"
+        label="Saldo"
         valor={saldoHoje}
         acao={
           <button
@@ -108,9 +108,9 @@ export default function Caixa() {
             className={`mb-3 flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs ${definido ? 'bg-white/5' : 'bg-[var(--mango)]/20'}`}
           >
             <span className="text-[var(--paper)]/70">
-              Saldo inicial de hoje: <b className="text-[var(--paper)]">{formatMoney(saldoInicial)} MT</b>
+              Saldo inicial: <b className="text-[var(--paper)]">{formatMoney(saldoInicial)} MT</b>
             </span>
-            <span className="font-semibold text-[var(--mango)]">{definido ? 'editar' : 'definir agora →'}</span>
+            <span className="font-semibold text-[var(--mango)]">{definido ? 'editar' : 'definir agora'}</span>
           </button>
         }
         sub={
