@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Modal from './Modal';
 import PillButton from './PillButton';
 import { useData } from '../context/DataContext';
-import { formatMoney, HOJE_KEY, seteDiasAtrasKey } from '../utils/format';
+import { formatMoney, formatDataCurta, periodoLabel, HOJE_KEY, seteDiasAtrasKey } from '../utils/format';
 
 function dentroPeriodo(dk, periodo) {
   if (periodo === 'dia') return dk === HOJE_KEY;
@@ -48,7 +48,16 @@ export default function RelatorioModal({ aberto, aoFechar }) {
     const vendasComStock = txs.filter((t) => t.tipo === 'entrada' && t.produtoId);
     const receitaStock = vendasComStock.reduce((s, t) => s + t.valor, 0);
     const custoStock = vendasComStock.reduce((s, t) => s + (t.custoTotal || 0), 0);
-    return { totalEntradas, totalSaidas, totalProdutos, totalMaquina, pagXitique, entXitique, guardadoPoupanca, retiradoPoupanca, recebidoFiados, emAbertoFiados, receitaStock, custoStock };
+
+    const porDiaMap = new Map();
+    txs.forEach((t) => {
+      const atual = porDiaMap.get(t.dateKey) || { dateKey: t.dateKey, entradas: 0, saidas: 0 };
+      if (t.tipo === 'entrada') atual.entradas += t.valor; else atual.saidas += t.valor;
+      porDiaMap.set(t.dateKey, atual);
+    });
+    const porDia = Array.from(porDiaMap.values()).sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
+
+    return { totalEntradas, totalSaidas, totalProdutos, totalMaquina, pagXitique, entXitique, guardadoPoupanca, retiradoPoupanca, recebidoFiados, emAbertoFiados, receitaStock, custoStock, porDia };
   }, [periodo, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado]);
 
   return (
@@ -59,12 +68,29 @@ export default function RelatorioModal({ aberto, aoFechar }) {
         <PillButton ativo={periodo === 'mes'} onClick={() => setPeriodo('mes')}>Mensal</PillButton>
       </div>
 
+      <p className="mt-3 text-center text-xs font-medium capitalize text-[var(--ink-soft)]">{periodoLabel(periodo)}</p>
+
       <Seccao titulo="Caixa do Dia">
         <Linha label="Entradas" valor={dados.totalEntradas} />
         <Linha label="🧺 Produtos" valor={dados.totalProdutos} />
         <Linha label="⚙️ Máquina" valor={dados.totalMaquina} />
         <Linha label="Saídas" valor={dados.totalSaidas} />
       </Seccao>
+
+      {periodo !== 'dia' && dados.porDia.length > 0 && (
+        <Seccao titulo="Lançamentos por dia">
+          {dados.porDia.map((d) => (
+            <div key={d.dateKey} className="flex items-center justify-between py-1.5 text-sm">
+              <span className="text-[var(--ink-soft)]">{formatDataCurta(d.dateKey)}</span>
+              <span className="font-mono-ref text-xs">
+                <span className="font-semibold text-[var(--ink)]">+{formatMoney(d.entradas)}</span>
+                {d.saidas > 0 && <span className="ml-1.5 text-[var(--brick)]">-{formatMoney(d.saidas)}</span>}
+                <span className="ml-1 text-[var(--ink-soft)]">MT</span>
+              </span>
+            </div>
+          ))}
+        </Seccao>
+      )}
 
       <Seccao titulo="Stock / Lucro Real">
         <Linha label="Vendeste (ligado ao stock)" valor={dados.receitaStock} />

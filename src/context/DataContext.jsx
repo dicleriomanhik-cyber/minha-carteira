@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { HOJE_KEY, amanhaKey, novoId, mesAtualLabel } from '../utils/format';
+import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 
 const STORAGE_KEY = 'caixaDoDia_transacoes';
 const STORAGE_SALDO_INICIAL = 'caixaDoDia_saldoInicial';
@@ -63,6 +65,59 @@ export function DataProvider({ children }) {
   const [fiados, setFiados] = usePersisted(STORAGE_FIADOS, []);
   const [produtos, setProdutos] = usePersisted(STORAGE_PRODUTOS, []);
   const [usuarioNome, setUsuarioNomeState] = usePersisted(STORAGE_NOME_USUARIO, '');
+
+  /* ---------- Sincronização com Supabase (entre aparelhos) ---------- */
+  const { user } = useAuth();
+  const [carregandoDados, setCarregandoDados] = useState(true);
+  const prontoRef = useRef(false);
+  const ignorarProximoSaveRef = useRef(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    prontoRef.current = false;
+    if (!user) { setCarregandoDados(false); return undefined; }
+    setCarregandoDados(true);
+    (async () => {
+      const { data, error } = await supabase.from('dados_financeiros').select('*').eq('id', user.id).maybeSingle();
+      if (cancelado) return;
+      if (!error && data) {
+        ignorarProximoSaveRef.current = true;
+        setTransacoes(data.transacoes || []);
+        setSaldoInicialMap(data.saldo_inicial || {});
+        setParticipantes(data.participantes || []);
+        setPagamentos(data.pagamentos || []);
+        setEntregas(data.entregas || []);
+        setMovimentosPoupanca(data.movimentos_poupanca || []);
+        setFiados(data.fiados || []);
+        setProdutos(data.produtos || []);
+      } else if (!error && !data) {
+        // Primeira vez desta conta a sincronizar: envia o que já existe neste aparelho como ponto de partida.
+        await supabase.from('dados_financeiros').upsert({
+          id: user.id,
+          transacoes, saldo_inicial: saldoInicialMap, participantes, pagamentos, entregas,
+          movimentos_poupanca: movimentosPoupanca, fiados, produtos,
+        });
+      }
+      if (!cancelado) { prontoRef.current = true; setCarregandoDados(false); }
+    })();
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user || !prontoRef.current) return undefined;
+    if (ignorarProximoSaveRef.current) { ignorarProximoSaveRef.current = false; return undefined; }
+    const handle = setTimeout(() => {
+      supabase.from('dados_financeiros').upsert({
+        id: user.id,
+        transacoes, saldo_inicial: saldoInicialMap, participantes, pagamentos, entregas,
+        movimentos_poupanca: movimentosPoupanca, fiados, produtos,
+        atualizado_em: new Date().toISOString(),
+      }).then(({ error }) => { if (error) console.error('Erro ao sincronizar dados:', error.message); });
+    }, 800);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, transacoes, saldoInicialMap, participantes, pagamentos, entregas, movimentosPoupanca, fiados, produtos]);
 
   /* ---------- Saldo inicial / caixa do dia ---------- */
   const getSaldoInicial = useCallback((dk) => (saldoInicialMap[dk] !== undefined ? saldoInicialMap[dk] : 0), [saldoInicialMap]);
@@ -334,6 +389,7 @@ export function DataProvider({ children }) {
 
   const value = {
     transacoes, saldoInicialMap, participantes, pagamentos, entregas, movimentosPoupanca, fiados, produtos, usuarioNome,
+    carregandoDados,
     setUsuarioNome: setUsuarioNomeState,
     getSaldoInicial, saldoInicialDefinidoHoje, saldoFechamentoDia, sugestaoSaldoInicial, setSaldoInicialHoje,
     doHoje, totalEntradasHoje, totalSaidasHoje, saldoHoje, totalProdutosHoje, totalMaquinaHoje, lucroRealHojeCalc,

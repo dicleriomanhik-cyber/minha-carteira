@@ -48,6 +48,29 @@ export function mesAtualLabel(ts) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
+export function formatDataLonga(dk) {
+  if (!dk) return '—';
+  const [y, m, d] = dk.split('-').map(Number);
+  const data = new Date(y, m - 1, d);
+  return `${String(d).padStart(2, '0')} ${MESES[data.getMonth()]} ${y}`;
+}
+
+export function periodoLabel(periodo) {
+  if (periodo === 'dia') {
+    const hoje = new Date();
+    return `${DIAS[hoje.getDay()]}, ${formatDataLonga(HOJE_KEY)}`;
+  }
+  if (periodo === 'semana') {
+    return `${formatDataLonga(seteDiasAtrasKey())} — ${formatDataLonga(HOJE_KEY)}`;
+  }
+  if (periodo === 'mes') {
+    const hoje = new Date();
+    const MESES_LONGO = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return `${MESES_LONGO[hoje.getMonth()]} de ${hoje.getFullYear()}`;
+  }
+  return '';
+}
+
 export function novoId() {
   return Date.now() + '-' + Math.random().toString(36).slice(2, 7);
 }

@@ -1,12 +1,58 @@
+import { useEffect, useRef, useState } from 'react';
+
+function useAlturaVisivel() {
+  const [altura, setAltura] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return undefined;
+    const vv = window.visualViewport;
+    const atualizar = () => setAltura(vv.height);
+    atualizar();
+    vv.addEventListener('resize', atualizar);
+    vv.addEventListener('scroll', atualizar);
+    return () => {
+      vv.removeEventListener('resize', atualizar);
+      vv.removeEventListener('scroll', atualizar);
+    };
+  }, []);
+
+  return altura;
+}
+
 export default function Modal({ titulo, subtitulo, children, aberto, aoFechar, tamanho = 'normal' }) {
+  const altura = useAlturaVisivel();
+  const conteudoRef = useRef(null);
+
+  // Quando o teclado abre e cobre o campo que a pessoa está a preencher,
+  // garante que esse campo fica visível dentro da própria janela.
+  useEffect(() => {
+    if (!aberto) return undefined;
+    const el = conteudoRef.current;
+    if (!el) return undefined;
+    function aoFocar(e) {
+      if (e.target.matches?.('input, textarea, select')) {
+        setTimeout(() => {
+          e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, 250);
+      }
+    }
+    el.addEventListener('focusin', aoFocar);
+    return () => el.removeEventListener('focusin', aoFocar);
+  }, [aberto]);
+
   if (!aberto) return null;
   return (
     <div
-      className="fixed inset-0 z-30 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+      className="fixed inset-x-0 top-0 z-30 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+      style={{ height: altura || '100dvh' }}
       onClick={aoFechar}
     >
       <div
-        className={`max-h-[92vh] w-full ${tamanho === 'larga' ? 'sm:max-w-md' : 'sm:max-w-sm'} overflow-y-auto rounded-t-2xl bg-[var(--paper)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-2xl`}
+        ref={conteudoRef}
+        className={`max-h-[92%] w-full ${tamanho === 'larga' ? 'sm:max-w-md' : 'sm:max-w-sm'} overflow-y-auto rounded-t-2xl bg-[var(--paper)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
