@@ -7,6 +7,7 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Linha from '../components/Linha';
 import { useData } from '../context/DataContext';
+import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, iniciais } from '../utils/format';
 
 export default function Xitique() {
@@ -14,6 +15,7 @@ export default function Xitique() {
     participantes, pagouHoje, salvarParticipante, deleteParticipante, desmarcarPagamento, registrarPagamento,
     totalGuardadoXitique, registrarEntrega, deleteEntrega, entregas,
   } = useData();
+  const { confirmar, avisar } = useDialog();
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modalParticipante, setModalParticipante] = useState(false);
@@ -42,27 +44,29 @@ export default function Xitique() {
     setModalParticipante(true);
   }
 
-  function guardarParticipante() {
+  async function guardarParticipante() {
     const n = nome.trim();
     const v = parseFloat(valorCombinado);
-    if (!n) { alert('Introduz o nome do participante.'); return; }
-    if (!v || v <= 0) { alert('Introduz um valor combinado válido.'); return; }
+    if (!n) { await avisar('Introduz o nome do participante.'); return; }
+    if (!v || v <= 0) { await avisar('Introduz um valor combinado válido.'); return; }
     salvarParticipante({ id: editandoId, nome: n, valorCombinado: v });
     setModalParticipante(false);
   }
 
-  function apagarAtual() {
+  async function apagarAtual() {
     if (!editandoId) return;
     const p = participantes.find((x) => x.id === editandoId);
     if (!p) return;
-    if (!confirm(`Apagar "${p.nome}" e o seu histórico de pagamentos?`)) return;
+    const ok = await confirmar(`Apagar "${p.nome}" e o seu histórico de pagamentos?`, { perigo: true, textoOk: 'Apagar' });
+    if (!ok) return;
     deleteParticipante(editandoId);
     setModalParticipante(false);
   }
 
-  function togglePagamento(p) {
+  async function togglePagamento(p) {
     if (pagouHoje(p.id)) {
-      if (!confirm('Desmarcar o pagamento de hoje?')) return;
+      const ok = await confirmar('Desmarcar o pagamento de hoje?', { textoOk: 'Desmarcar' });
+      if (!ok) return;
       desmarcarPagamento(p.id);
       return;
     }
@@ -70,28 +74,28 @@ export default function Xitique() {
     setValorPagamento(p.valorCombinado);
   }
 
-  function confirmarPagamento() {
+  async function confirmarPagamento() {
     const v = parseFloat(valorPagamento);
-    if (!v || v <= 0) { alert('Introduz um valor válido.'); return; }
+    if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
     registrarPagamento(modalPagamento.id, v);
     setModalPagamento(null);
   }
 
-  function abrirEntrega() {
+  async function abrirEntrega() {
     const total = totalGuardadoXitique;
-    if (total <= 0) { alert('Ainda não há dinheiro guardado no Xitique.'); return; }
-    if (participantes.length === 0) { alert('Adiciona primeiro pelo menos um participante — a entrega só pode ser feita a alguém da lista.'); return; }
+    if (total <= 0) { await avisar('Ainda não há dinheiro guardado no Xitique.'); return; }
+    if (participantes.length === 0) { await avisar('Adiciona primeiro pelo menos um participante — a entrega só pode ser feita a alguém da lista.'); return; }
     setValorEntrega(total.toFixed(2));
     setQuemRecebeu(participantes[0].id);
     setModalEntrega(true);
   }
 
-  function confirmarEntregaFn() {
+  async function confirmarEntregaFn() {
     const v = parseFloat(valorEntrega);
     const total = totalGuardadoXitique;
-    if (!quemRecebeu) { alert('Escolhe quem recebeu a entrega.'); return; }
-    if (!v || v <= 0) { alert('Introduz um valor válido.'); return; }
-    if (v > total + 0.01) { alert('Esse valor é maior que o total guardado (' + formatMoney(total) + ' MT).'); return; }
+    if (!quemRecebeu) { await avisar('Escolhe quem recebeu a entrega.'); return; }
+    if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
+    if (v > total + 0.01) { await avisar('Esse valor é maior que o total guardado (' + formatMoney(total) + ' MT).'); return; }
     registrarEntrega(v, quemRecebeu);
     setModalEntrega(false);
   }
@@ -135,7 +139,7 @@ export default function Xitique() {
                     {pago ? '✓ Pagou' : 'Marcar Pago'}
                   </button>
                 }
-                aoApagar={() => { if (confirm(`Apagar "${p.nome}" e o seu histórico de pagamentos?`)) deleteParticipante(p.id); }}
+                aoApagar={async () => { const ok = await confirmar(`Apagar "${p.nome}" e o seu histórico de pagamentos?`, { perigo: true, textoOk: 'Apagar' }); if (ok) deleteParticipante(p.id); }}
               />
             );
           })
@@ -163,7 +167,7 @@ export default function Xitique() {
                   <span className="text-[var(--ink)]">{formatDataExtenso(new Date(e.timestamp))}{e.nota ? ' · ' + e.nota : ''}</span>
                   <span className="flex items-center gap-2">
                     <span className="font-mono-ref font-semibold text-[var(--ink)]">{formatMoney(e.valor)} MT</span>
-                    <button onClick={() => { if (confirm('Apagar esta entrega do Xitique? O valor volta a contar como guardado.')) deleteEntrega(e.id); }} className="text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
+                    <button onClick={async () => { const ok = await confirmar('Apagar esta entrega do Xitique? O valor volta a contar como guardado.', { perigo: true, textoOk: 'Apagar' }); if (ok) deleteEntrega(e.id); }} className="text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
                   </span>
                 </div>
               ))

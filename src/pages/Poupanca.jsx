@@ -6,6 +6,7 @@ import Campo from '../components/Campo';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { useData } from '../context/DataContext';
+import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, formatHora } from '../utils/format';
 
 export default function Poupanca() {
@@ -13,6 +14,7 @@ export default function Poupanca() {
     totalPoupancaCalc, guardadoMesAtual, movimentosPoupanca,
     guardarPoupanca, retirarPoupanca, deleteMovimentoPoupanca, saldoHoje,
   } = useData();
+  const { confirmar, avisar } = useDialog();
 
   const [modalGuardar, setModalGuardar] = useState(false);
   const [valorGuardar, setValorGuardar] = useState('');
@@ -28,28 +30,28 @@ export default function Poupanca() {
     setModalGuardar(true);
   }
 
-  function confirmarGuardarFn() {
+  async function confirmarGuardarFn() {
     const v = parseFloat(valorGuardar);
-    if (!v || v <= 0) { alert('Introduz um valor válido.'); return; }
+    if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
     if (v > saldoHoje + 0.01) {
-      alert('Esse valor é maior que o Saldo na Mão de hoje (' + formatMoney(saldoHoje) + ' MT). Confirma o valor no Caixa do Dia primeiro.');
+      await avisar('Esse valor é maior que o Saldo na Mão de hoje (' + formatMoney(saldoHoje) + ' MT). Confirma o valor no Caixa do Dia primeiro.');
       return;
     }
     guardarPoupanca(v, notaGuardar.trim());
     setModalGuardar(false);
   }
 
-  function abrirRetirar() {
-    if (totalPoupancaCalc <= 0) { alert('Ainda não há dinheiro guardado na Poupança.'); return; }
+  async function abrirRetirar() {
+    if (totalPoupancaCalc <= 0) { await avisar('Ainda não há dinheiro guardado na Poupança.'); return; }
     setValorRetirar('');
     setNotaRetirar('');
     setModalRetirar(true);
   }
 
-  function confirmarRetirarFn() {
+  async function confirmarRetirarFn() {
     const v = parseFloat(valorRetirar);
-    if (!v || v <= 0) { alert('Introduz um valor válido.'); return; }
-    if (v > totalPoupancaCalc + 0.01) { alert('Esse valor é maior que a tua Poupança total (' + formatMoney(totalPoupancaCalc) + ' MT).'); return; }
+    if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
+    if (v > totalPoupancaCalc + 0.01) { await avisar('Esse valor é maior que a tua Poupança total (' + formatMoney(totalPoupancaCalc) + ' MT).'); return; }
     retirarPoupanca(v, notaRetirar.trim());
     setModalRetirar(false);
   }
@@ -91,7 +93,7 @@ export default function Poupanca() {
               <div className={`font-mono-ref shrink-0 text-sm font-semibold ${m.tipo === 'deposito' ? 'text-[var(--teal)]' : 'text-[var(--brick)]'}`}>
                 {m.tipo === 'deposito' ? '+' : '−'} {formatMoney(m.valor)}
               </div>
-              <button onClick={() => { if (confirm('Apagar este movimento da Poupança?')) deleteMovimentoPoupanca(m.id); }} className="shrink-0 p-1 text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
+              <button onClick={async () => { const ok = await confirmar('Apagar este movimento da Poupança?', { perigo: true, textoOk: 'Apagar' }); if (ok) deleteMovimentoPoupanca(m.id); }} className="shrink-0 p-1 text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
             </div>
           ))
         )}

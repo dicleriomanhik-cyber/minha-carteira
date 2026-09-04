@@ -7,12 +7,14 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Linha from '../components/Linha';
 import { useData } from '../context/DataContext';
+import { useDialog } from '../components/DialogProvider';
 import { formatMoney } from '../utils/format';
 
 const CAMPOS_VAZIOS = { nome: '', quantidade: '', precoCusto: '', precoVenda: '', alertaEm: '3' };
 
 export default function Produtos() {
   const { produtos, salvarProduto, deleteProduto, reporProduto, lucroRealHojeCalc } = useData();
+  const { confirmar, avisar } = useDialog();
   const { receita, custo, lucro } = lucroRealHojeCalc();
 
   const [modalAberto, setModalAberto] = useState(false);
@@ -35,7 +37,7 @@ export default function Produtos() {
     setModalAberto(true);
   }
 
-  function guardar() {
+  async function guardar() {
     const nome = campos.nome.trim();
     const quantidade = parseInt(campos.quantidade);
     const precoCusto = parseFloat(campos.precoCusto);
@@ -43,18 +45,19 @@ export default function Produtos() {
     const alertaEmRaw = parseInt(campos.alertaEm);
     const alertaEm = isNaN(alertaEmRaw) ? 3 : alertaEmRaw;
 
-    if (!nome) { alert('Introduz o nome do produto.'); return; }
-    if (isNaN(quantidade) || quantidade < 0) { alert('Introduz uma quantidade válida.'); return; }
-    if (isNaN(precoCusto) || precoCusto < 0) { alert('Introduz um preço de custo válido.'); return; }
-    if (isNaN(precoVenda) || precoVenda < 0) { alert('Introduz um preço de venda válido.'); return; }
+    if (!nome) { await avisar('Introduz o nome do produto.'); return; }
+    if (isNaN(quantidade) || quantidade < 0) { await avisar('Introduz uma quantidade válida.'); return; }
+    if (isNaN(precoCusto) || precoCusto < 0) { await avisar('Introduz um preço de custo válido.'); return; }
+    if (isNaN(precoVenda) || precoVenda < 0) { await avisar('Introduz um preço de venda válido.'); return; }
 
     salvarProduto({ id: editandoId, nome, quantidade, precoCusto, precoVenda, alertaEm });
     setModalAberto(false);
   }
 
-  function apagarAtual() {
+  async function apagarAtual() {
     if (!editandoId) return;
-    if (!confirm('Apagar este produto do stock? Isto não apaga vendas já registadas.')) return;
+    const ok = await confirmar('Apagar este produto do stock? Isto não apaga vendas já registadas.', { perigo: true, textoOk: 'Apagar' });
+    if (!ok) return;
     deleteProduto(editandoId);
     setModalAberto(false);
   }
@@ -65,10 +68,10 @@ export default function Produtos() {
     setReporCusto('');
   }
 
-  function confirmarRepor() {
+  async function confirmarRepor() {
     const qtd = parseInt(reporQtd);
     const novoCusto = parseFloat(reporCusto);
-    if (!qtd || qtd <= 0) { alert('Introduz uma quantidade válida.'); return; }
+    if (!qtd || qtd <= 0) { await avisar('Introduz uma quantidade válida.'); return; }
     reporProduto(modalRepor.id, qtd, novoCusto);
     setModalRepor(null);
   }
