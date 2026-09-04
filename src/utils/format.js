@@ -16,9 +16,12 @@ export function seteDiasAtrasKey() {
 export function formatMoney(n) {
   n = Math.round((n + Number.EPSILON) * 100) / 100;
   const neg = n < 0;
-  let parts = Math.abs(n).toFixed(2).split('.');
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return (neg ? '-' : '') + parts[0] + ',' + parts[1];
+  const abs = Math.abs(n);
+  // Número simples, sem ponto de milhar — e só mostra as casas decimais
+  // quando existem mesmo cêntimos (ex: 236 em vez de 236,00; 1234 em vez
+  // de 1.234,00; mas 236,50 continua a mostrar os 50 cêntimos).
+  const texto = Number.isInteger(abs) ? String(abs) : abs.toFixed(2).replace('.', ',');
+  return (neg ? '-' : '') + texto;
 }
 
 const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
