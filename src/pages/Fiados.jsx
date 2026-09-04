@@ -7,6 +7,7 @@ import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Linha from '../components/Linha';
 import { useData } from '../context/DataContext';
+import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataCurta, iniciais, dateKey } from '../utils/format';
 
 function Badge({ status }) {
@@ -19,6 +20,7 @@ const CAMPOS_VAZIOS = { cliente: '', produtoStockId: '', produtoDescricao: '', q
 
 export default function Fiados() {
   const { fiados, produtos, saldoFiado, statusFiado, nomesClientesFiado, salvarFiado, registarRecebimentoFiado, deleteFiado } = useData();
+  const { confirmar, avisar } = useDialog();
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
@@ -72,24 +74,24 @@ export default function Fiados() {
     });
   }
 
-  function guardar() {
+  async function guardar() {
     const cliente = campos.cliente.trim();
     const produtoDescricao = campos.produtoDescricao.trim();
     const valorTotal = parseFloat(campos.valorTotal);
     let valorPago = parseFloat(campos.valorPago);
     const vencimento = campos.vencimento;
 
-    if (!cliente) { alert('Introduz o nome do cliente.'); return; }
-    if (!produtoDescricao) { alert('Descreve o produto ou escolhe um do stock.'); return; }
-    if (!valorTotal || valorTotal <= 0) { alert('Introduz um valor total válido.'); return; }
+    if (!cliente) { await avisar('Introduz o nome do cliente.'); return; }
+    if (!produtoDescricao) { await avisar('Descreve o produto ou escolhe um do stock.'); return; }
+    if (!valorTotal || valorTotal <= 0) { await avisar('Introduz um valor total válido.'); return; }
     if (isNaN(valorPago) || valorPago < 0) valorPago = 0;
-    if (valorPago > valorTotal) { alert('O valor pago agora não pode ser maior que o valor total.'); return; }
-    if (!vencimento) { alert('Escolhe a data de vencimento.'); return; }
+    if (valorPago > valorTotal) { await avisar('O valor pago agora não pode ser maior que o valor total.'); return; }
+    if (!vencimento) { await avisar('Escolhe a data de vencimento.'); return; }
 
     const quantidade = campos.produtoStockId ? (parseInt(campos.quantidade) || 1) : null;
 
     const res = salvarFiado({ cliente, produtoStockId: campos.produtoStockId || null, produtoDescricao, quantidade, valorTotal, valorPago, vencimento });
-    if (res.erro) { alert(res.erro); return; }
+    if (res.erro) { await avisar(res.erro); return; }
     setModalAberto(false);
   }
 
@@ -98,12 +100,12 @@ export default function Fiados() {
     setValorReceber(saldoFiado(f).toFixed(2));
   }
 
-  function confirmarReceber() {
+  async function confirmarReceber() {
     const f = modalReceber;
     const devido = saldoFiado(f);
     const v = parseFloat(valorReceber);
-    if (!v || v <= 0) { alert('Introduz um valor válido.'); return; }
-    if (v > devido + 0.01) { alert('Esse valor é maior que a dívida (' + formatMoney(devido) + ' MT).'); return; }
+    if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
+    if (v > devido + 0.01) { await avisar('Esse valor é maior que a dívida (' + formatMoney(devido) + ' MT).'); return; }
     registarRecebimentoFiado(f.id, v, 'fiado_recebido', 'Pagamento de fiado - ' + f.cliente);
     setModalReceber(null);
   }
@@ -143,7 +145,7 @@ export default function Fiados() {
                   Receber
                 </button>
               }
-              aoApagar={() => { if (confirm(`Apagar o fiado de "${f.cliente}" (${f.produto})? Os pagamentos já recebidos continuam no Caixa do Dia.`)) deleteFiado(f.id); }}
+              aoApagar={async () => { const ok = await confirmar(`Apagar o fiado de "${f.cliente}" (${f.produto})? Os pagamentos já recebidos continuam no Caixa do Dia.`, { perigo: true, textoOk: 'Apagar' }); if (ok) deleteFiado(f.id); }}
             />
           ))
         )}
@@ -163,7 +165,7 @@ export default function Fiados() {
                   <span className="truncate text-[var(--ink)]">{f.cliente} · {f.produto}</span>
                   <span className="flex shrink-0 items-center gap-2">
                     <span className="font-mono-ref font-semibold text-[var(--ink)]">{formatMoney(f.valorTotal)} MT</span>
-                    <button onClick={() => { if (confirm(`Apagar o fiado de "${f.cliente}" (${f.produto})? Os pagamentos já recebidos continuam no Caixa do Dia.`)) deleteFiado(f.id); }} className="text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
+                    <button onClick={async () => { const ok = await confirmar(`Apagar o fiado de "${f.cliente}" (${f.produto})? Os pagamentos já recebidos continuam no Caixa do Dia.`, { perigo: true, textoOk: 'Apagar' }); if (ok) deleteFiado(f.id); }} className="text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
                   </span>
                 </div>
               ))

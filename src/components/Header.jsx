@@ -14,11 +14,8 @@ export default function Header({ aoAbrirRelatorio }) {
     <header className="sticky top-0 z-10 border-b border-black/10 bg-[var(--bg)]/95 backdrop-blur">
       <div className="flex items-center justify-between gap-3 px-4 pt-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--mango)] font-display text-sm font-bold text-[var(--mango-ink)]">
-            MC
-          </div>
           <div>
-            <span className="block font-display text-base font-semibold leading-tight text-[var(--cream)]">MinhaCarteira</span>
+            <span className="block font-display text-lg font-extrabold tracking-tight leading-tight text-[var(--mango)]">Minha Carteira</span>
             <span className="block text-[10px] leading-tight text-[var(--cream-soft)]">Powered by SmartMetrics</span>
           </div>
         </div>
