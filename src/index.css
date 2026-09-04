@@ -37,8 +37,9 @@ body {
 }
 
 .font-mono-ref {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  letter-spacing: 0.04em;
+  font-family: 'Public Sans', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
 :focus-visible {

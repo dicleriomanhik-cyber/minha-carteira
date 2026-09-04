@@ -2,20 +2,22 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useDialog } from '../components/DialogProvider';
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import Modal from '../components/Modal';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
 import MensagemErro from '../components/MensagemErro';
+import { IconeCamara, IconeCaneta, IconeBackup } from '../components/Icons';
 
-function PillButton({ icon, label, onClick }) {
+function PillButton({ icon: Icon, label, onClick }) {
   return (
     <button
       onClick={onClick}
       className="flex flex-1 flex-col items-center gap-1.5 rounded-2xl bg-[var(--bg-soft)] px-2 py-3 text-center transition active:scale-[0.97]"
     >
-      <span className="text-lg">{icon}</span>
+      <Icon className="h-5 w-5 text-[var(--mango)]" />
       <span className="text-xs font-medium leading-tight text-[var(--ink)]">{label}</span>
     </button>
   );
@@ -35,6 +37,7 @@ export default function Perfil() {
   const navigate = useNavigate();
   const { user, profile, sair, atualizarPerfil, excluirConta, recarregarPerfil } = useAuth();
   const { exportarBackup, importarBackup } = useData();
+  const { confirmar, avisar } = useDialog();
   const fileFotoRef = useRef(null);
   const fileBackupRef = useRef(null);
 
@@ -82,16 +85,17 @@ export default function Perfil() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const dados = JSON.parse(ev.target.result);
-        if (!window.confirm('Isto vai substituir os dados atuais deste aparelho pelos dados deste ficheiro. Continuar?')) {
+        const ok = await confirmar('Isto vai substituir os dados atuais deste aparelho pelos dados deste ficheiro. Continuar?', { perigo: true, textoOk: 'Continuar' });
+        if (!ok) {
           e.target.value = '';
           return;
         }
         importarBackup(dados);
       } catch {
-        window.alert('Não foi possível ler este ficheiro. Verifica se é um backup válido do Minha Carteira.');
+        await avisar('Não foi possível ler este ficheiro. Verifica se é um backup válido do Minha Carteira.');
         e.target.value = '';
       }
     };
@@ -126,9 +130,9 @@ export default function Perfil() {
         <p className="text-xs text-[var(--ink-soft)]">{user?.email}</p>
 
         <div className="mt-5 flex w-full gap-2.5">
-          <PillButton icon="📷" label="Definir Foto" onClick={() => fileFotoRef.current?.click()} />
-          <PillButton icon="✏️" label="Editar Informações" onClick={() => { setNome(profile?.nome || ''); setWhatsapp(profile?.whatsapp || ''); setErro(''); setAEditar(true); }} />
-          <PillButton icon="⬇️" label="Backup" onClick={() => setAEditar('backup')} />
+          <PillButton icon={IconeCamara} label="Definir Foto" onClick={() => fileFotoRef.current?.click()} />
+          <PillButton icon={IconeCaneta} label="Editar Informações" onClick={() => { setNome(profile?.nome || ''); setWhatsapp(profile?.whatsapp || ''); setErro(''); setAEditar(true); }} />
+          <PillButton icon={IconeBackup} label="Backup" onClick={() => setAEditar('backup')} />
         </div>
         <input ref={fileFotoRef} type="file" accept="image/*" className="hidden" onChange={aoEscolherFoto} />
 
@@ -163,8 +167,8 @@ export default function Perfil() {
           A tua conta sincroniza os dados entre aparelhos. O backup local continua disponível como cópia extra dos dados deste telemóvel.
         </p>
         <div className="space-y-2.5">
-          <Botao onClick={exportarBackup}>⬇️ Exportar Backup</Botao>
-          <Botao variante="secundario" onClick={() => fileBackupRef.current?.click()}>⬆️ Importar Backup</Botao>
+          <Botao onClick={exportarBackup}>Exportar Backup</Botao>
+          <Botao variante="secundario" onClick={() => fileBackupRef.current?.click()}>Importar Backup</Botao>
           <input ref={fileBackupRef} type="file" accept="application/json" className="hidden" onChange={aoImportarBackup} />
         </div>
       </Modal>
