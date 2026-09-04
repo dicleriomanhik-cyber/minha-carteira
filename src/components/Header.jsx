@@ -18,7 +18,7 @@ export default function Header({ aoAbrirRelatorio }) {
             MC
           </div>
           <div>
-            <span className="block font-display text-base font-semibold leading-tight text-[var(--cream)]">MinhaCarteira</span>
+            <span className="block font-display text-lg font-extrabold tracking-tight leading-tight text-[var(--mango)]">Minha Carteira</span>
             <span className="block text-[10px] leading-tight text-[var(--cream-soft)]">Powered by SmartMetrics</span>
           </div>
         </div>

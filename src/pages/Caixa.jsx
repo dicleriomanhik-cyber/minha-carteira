@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import AlertBanner from '../components/AlertBanner';
 import { useData } from '../context/DataContext';
 import { CATEGORIAS, CAT_LOOKUP } from '../context/DataContext';
+import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, formatHora, HOJE_KEY } from '../utils/format';
 
 function ChipCategoria({ cat, selecionada, onClick }) {
@@ -30,6 +31,7 @@ export default function Caixa() {
     getSaldoInicial, saldoInicialDefinidoHoje, sugestaoSaldoInicial, setSaldoInicialHoje,
     addTransacao, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias, saldoFechamentoDia, produtos,
   } = useData();
+  const { confirmar, avisar } = useDialog();
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState(null); // 'entrada' | 'saida' | null
@@ -68,15 +70,15 @@ export default function Caixa() {
     if (p) setValor(((parseInt(q) || 1) * p.precoVenda).toFixed(2));
   }
 
-  function salvar() {
+  async function salvar() {
     const v = parseFloat(valor);
-    if (!categoria) { alert('Escolhe uma categoria.'); return; }
-    if (!v || v <= 0) { alert('Introduz um valor válido.'); return; }
+    if (!categoria) { await avisar('Escolhe uma categoria.'); return; }
+    if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
 
     if (categoria === 'venda' && produtoId) {
       const qtd = parseInt(qtdVenda) || 1;
       const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), produtoId, quantidade: qtd });
-      if (res.erro) { alert(res.erro); return; }
+      if (res.erro) { await avisar(res.erro); return; }
     } else {
       addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim() });
     }
@@ -88,9 +90,9 @@ export default function Caixa() {
     setModalSaldoAberto(true);
   }
 
-  function confirmarSaldoInicial() {
+  async function confirmarSaldoInicial() {
     const v = parseFloat(valorSaldo);
-    if (isNaN(v) || v < 0) { alert('Introduz um valor válido (pode ser 0).'); return; }
+    if (isNaN(v) || v < 0) { await avisar('Introduz um valor válido (pode ser 0).'); return; }
     setSaldoInicialHoje(v);
     setModalSaldoAberto(false);
   }
@@ -160,7 +162,7 @@ export default function Caixa() {
                   <div className={`font-mono-ref shrink-0 text-sm font-semibold ${t.tipo === 'entrada' ? 'text-[var(--teal)]' : 'text-[var(--brick)]'}`}>
                     {t.tipo === 'entrada' ? '+' : '−'} {formatMoney(t.valor)}
                   </div>
-                  <button onClick={() => { if (confirm('Apagar este registo?')) deleteTransacao(t.id); }} className="shrink-0 p-1 text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
+                  <button onClick={async () => { const ok = await confirmar('Apagar este registo?', { perigo: true, textoOk: 'Apagar' }); if (ok) deleteTransacao(t.id); }} className="shrink-0 p-1 text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
                 </div>
               );
             })}
@@ -185,7 +187,7 @@ export default function Caixa() {
                     <span className="text-[var(--ink)]">{formatDataExtenso(dataObj)}</span>
                     <span className="flex items-center gap-2">
                       <span className="font-mono-ref font-semibold text-[var(--ink)]">{formatMoney(saldoFechamentoDia(dk))} MT</span>
-                      <button onClick={() => { if (confirm(`Apagar todos os registos de ${formatDataExtenso(dataObj)}? Esta ação não pode ser desfeita.`)) deleteDia(dk); }} className="text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
+                      <button onClick={async () => { const ok = await confirmar(`Apagar todos os registos de ${formatDataExtenso(dataObj)}? Esta ação não pode ser desfeita.`, { perigo: true, textoOk: 'Apagar' }); if (ok) deleteDia(dk); }} className="text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
                     </span>
                   </div>
                 );
