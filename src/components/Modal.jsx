@@ -1,42 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-
-function useAlturaVisivel() {
-  const [altura, setAltura] = useState(() => {
-    if (typeof window === 'undefined') return 0;
-    return window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.visualViewport) return undefined;
-    const vv = window.visualViewport;
-    const atualizar = () => setAltura(vv.height);
-    atualizar();
-    vv.addEventListener('resize', atualizar);
-    vv.addEventListener('scroll', atualizar);
-    return () => {
-      vv.removeEventListener('resize', atualizar);
-      vv.removeEventListener('scroll', atualizar);
-    };
-  }, []);
-
-  return altura;
-}
+import { useEffect, useRef } from 'react';
 
 export default function Modal({ titulo, subtitulo, children, aberto, aoFechar, tamanho = 'normal' }) {
-  const altura = useAlturaVisivel();
   const conteudoRef = useRef(null);
 
-  // Quando o teclado abre e cobre o campo que a pessoa está a preencher,
-  // garante que esse campo fica visível dentro da própria janela.
+  // O index.html já pede ao telemóvel para redimensionar o próprio conteúdo
+  // quando o teclado abre (meta viewport "interactive-widget=resizes-content").
+  // Por isso a janela usa apenas `100dvh` (unidade que já acompanha essa
+  // mudança sozinha) — nada de recalcular a altura à mão em JavaScript, que
+  // competia com o redimensionamento nativo e fazia a janela "não se mover"
+  // ou parecer fechar quando o teclado aparecia.
   useEffect(() => {
     if (!aberto) return undefined;
     const el = conteudoRef.current;
     if (!el) return undefined;
     function aoFocar(e) {
       if (e.target.matches?.('input, textarea, select')) {
+        // Espera o teclado (e o redimensionamento nativo) assentar antes de
+        // rolar o campo para o centro da janela ainda visível.
         setTimeout(() => {
           e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }, 250);
+        }, 300);
       }
     }
     el.addEventListener('focusin', aoFocar);
@@ -46,8 +29,7 @@ export default function Modal({ titulo, subtitulo, children, aberto, aoFechar, t
   if (!aberto) return null;
   return (
     <div
-      className="fixed inset-x-0 top-0 z-30 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
-      style={{ height: altura || '100dvh' }}
+      className="fixed inset-x-0 top-0 z-30 flex h-[100dvh] items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
       onClick={aoFechar}
     >
       <div

@@ -17,10 +17,9 @@ export function formatMoney(n) {
   n = Math.round((n + Number.EPSILON) * 100) / 100;
   const neg = n < 0;
   const abs = Math.abs(n);
-  // Número simples, sem ponto de milhar — e só mostra as casas decimais
-  // quando existem mesmo cêntimos (ex: 236 em vez de 236,00; 1234 em vez
-  // de 1.234,00; mas 236,50 continua a mostrar os 50 cêntimos).
-  const texto = Number.isInteger(abs) ? String(abs) : abs.toFixed(2).replace('.', ',');
+  // Número simples, sem ponto de milhar, mas sempre com as duas casas
+  // decimais (ex: 0,00; 236,00; 236,50) para ficar claro que é dinheiro.
+  const texto = abs.toFixed(2).replace('.', ',');
   return (neg ? '-' : '') + texto;
 }
 
