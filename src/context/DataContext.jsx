@@ -119,16 +119,55 @@ export function DataProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, transacoes, saldoInicialMap, participantes, pagamentos, entregas, movimentosPoupanca, fiados, produtos]);
 
-  /* ---------- Saldo inicial / caixa do dia ---------- */
-  const getSaldoInicial = useCallback((dk) => (saldoInicialMap[dk] !== undefined ? saldoInicialMap[dk] : 0), [saldoInicialMap]);
-  const saldoInicialDefinidoHoje = useCallback(() => saldoInicialMap[HOJE_KEY] !== undefined, [saldoInicialMap]);
+  /* ---------- Saldo inicial / caixa do dia (por setor: produtos e máquina) ---------- */
+  // Formato novo: saldoInicialMap[dk] = { produtos: number, maquina: number }
+  // Formato antigo (antes da separação por setor): saldoInicialMap[dk] = number
+  // A função abaixo normaliza os dois formatos e assinala quando um dia ainda
+  // está no formato antigo e precisa de ser dividido manualmente pelo utilizador.
+  const SETORES = ['produtos', 'maquina'];
+  const normalizarSaldoInicialDia = useCallback((v) => {
+    if (v === undefined || v === null) return null;
+    if (typeof v === 'number') return { produtos: v, maquina: 0, legado: true };
+    return v;
+  }, []);
 
-  const saldoFechamentoDia = useCallback((dk) => {
-    const doDia = transacoes.filter((t) => t.dateKey === dk);
+  const getSaldoInicialSetor = useCallback((dk, setor) => {
+    const v = normalizarSaldoInicialDia(saldoInicialMap[dk]);
+    return v ? (v[setor] || 0) : 0;
+  }, [saldoInicialMap, normalizarSaldoInicialDia]);
+
+  // Mantido por compatibilidade: saldo inicial "total" de um dia (soma dos setores).
+  const getSaldoInicial = useCallback((dk) => SETORES.reduce((s, setor) => s + getSaldoInicialSetor(dk, setor), 0), [getSaldoInicialSetor]);
+
+  const precisaMigrarSaldoInicialHoje = useMemo(() => {
+    const v = normalizarSaldoInicialDia(saldoInicialMap[HOJE_KEY]);
+    return !!(v && v.legado);
+  }, [saldoInicialMap, normalizarSaldoInicialDia]);
+
+  const saldoInicialLegadoHoje = useMemo(() => (typeof saldoInicialMap[HOJE_KEY] === 'number' ? saldoInicialMap[HOJE_KEY] : null), [saldoInicialMap]);
+
+  const saldoInicialSetorDefinidoHoje = useCallback((setor) => {
+    const v = normalizarSaldoInicialDia(saldoInicialMap[HOJE_KEY]);
+    if (!v || v.legado) return false;
+    return v[setor] !== undefined;
+  }, [saldoInicialMap, normalizarSaldoInicialDia]);
+
+  const setSaldoInicialSetorHoje = useCallback((setor, valor) => {
+    setSaldoInicialMap((m) => {
+      const atual = normalizarSaldoInicialDia(m[HOJE_KEY]) || { produtos: 0, maquina: 0 };
+      const { legado, ...limpo } = atual;
+      return { ...m, [HOJE_KEY]: { ...limpo, [setor]: valor } };
+    });
+  }, [setSaldoInicialMap, normalizarSaldoInicialDia]);
+
+  const saldoFechamentoDiaSetor = useCallback((dk, setor) => {
+    const doDia = transacoes.filter((t) => t.dateKey === dk && (t.setor || 'produtos') === setor);
     const ent = doDia.filter((t) => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0);
     const sai = doDia.filter((t) => t.tipo === 'saida').reduce((s, t) => s + t.valor, 0);
-    return getSaldoInicial(dk) + ent - sai;
-  }, [transacoes, getSaldoInicial]);
+    return getSaldoInicialSetor(dk, setor) + ent - sai;
+  }, [transacoes, getSaldoInicialSetor]);
+
+  const saldoFechamentoDia = useCallback((dk) => SETORES.reduce((s, setor) => s + saldoFechamentoDiaSetor(dk, setor), 0), [saldoFechamentoDiaSetor]);
 
   const ultimoDiaAnteriorComDados = useCallback(() => {
     const chaves = new Set([...transacoes.map((t) => t.dateKey), ...Object.keys(saldoInicialMap)]);
@@ -136,20 +175,25 @@ export function DataProvider({ children }) {
     return anteriores.length ? anteriores[0] : null;
   }, [transacoes, saldoInicialMap]);
 
-  const sugestaoSaldoInicial = useCallback(() => {
-    if (saldoInicialDefinidoHoje()) return getSaldoInicial(HOJE_KEY);
+  const sugestaoSaldoInicialSetor = useCallback((setor) => {
+    if (saldoInicialSetorDefinidoHoje(setor)) return getSaldoInicialSetor(HOJE_KEY, setor);
     const prevDia = ultimoDiaAnteriorComDados();
-    return prevDia ? Math.max(0, saldoFechamentoDia(prevDia)) : 0;
-  }, [saldoInicialDefinidoHoje, getSaldoInicial, ultimoDiaAnteriorComDados, saldoFechamentoDia]);
-
-  const setSaldoInicialHoje = useCallback((valor) => {
-    setSaldoInicialMap((m) => ({ ...m, [HOJE_KEY]: valor }));
-  }, [setSaldoInicialMap]);
+    return prevDia ? Math.max(0, saldoFechamentoDiaSetor(prevDia, setor)) : 0;
+  }, [saldoInicialSetorDefinidoHoje, getSaldoInicialSetor, ultimoDiaAnteriorComDados, saldoFechamentoDiaSetor]);
 
   const doHoje = useMemo(() => transacoes.filter((t) => t.dateKey === HOJE_KEY).sort((a, b) => b.timestamp - a.timestamp), [transacoes]);
+  const doHojePorSetor = useCallback((setor) => doHoje.filter((t) => (t.setor || 'produtos') === setor), [doHoje]);
   const totalEntradasHoje = useMemo(() => doHoje.filter((t) => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0), [doHoje]);
   const totalSaidasHoje = useMemo(() => doHoje.filter((t) => t.tipo === 'saida').reduce((s, t) => s + t.valor, 0), [doHoje]);
-  const saldoHoje = getSaldoInicial(HOJE_KEY) + totalEntradasHoje - totalSaidasHoje;
+
+  const totalEntradasSetorHoje = useCallback((setor) => doHojePorSetor(setor).filter((t) => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0), [doHojePorSetor]);
+  const totalSaidasSetorHoje = useCallback((setor) => doHojePorSetor(setor).filter((t) => t.tipo === 'saida').reduce((s, t) => s + t.valor, 0), [doHojePorSetor]);
+  const saldoSetorHoje = useCallback((setor) => getSaldoInicialSetor(HOJE_KEY, setor) + totalEntradasSetorHoje(setor) - totalSaidasSetorHoje(setor), [getSaldoInicialSetor, totalEntradasSetorHoje, totalSaidasSetorHoje]);
+
+  const saldoProdutosHoje = saldoSetorHoje('produtos');
+  const saldoMaquinaHoje = saldoSetorHoje('maquina');
+  // Saldo total: nunca é definido manualmente — é sempre a soma automática dos dois setores.
+  const saldoHoje = saldoProdutosHoje + saldoMaquinaHoje;
   const totalProdutosHoje = useMemo(() => doHoje.filter((t) => t.tipo === 'entrada' && t.categoria === 'venda').reduce((s, t) => s + t.valor, 0), [doHoje]);
   const totalMaquinaHoje = useMemo(() => doHoje.filter((t) => t.tipo === 'entrada' && t.categoria === 'maquina').reduce((s, t) => s + t.valor, 0), [doHoje]);
 
@@ -160,22 +204,22 @@ export function DataProvider({ children }) {
     return { receita, custo, lucro: receita - custo };
   }, [transacoes]);
 
-  const addTransacao = useCallback(({ tipo, categoria, valor, nota, produtoId = null, quantidade = null, custoTotal = 0 }) => {
+  const addTransacao = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId = null, quantidade = null, custoTotal = 0 }) => {
     const agora = Date.now();
-    const tx = { id: novoId(), tipo, categoria, valor, nota, timestamp: agora, dateKey: HOJE_KEY };
+    const tx = { id: novoId(), tipo, categoria, valor, nota, setor, timestamp: agora, dateKey: HOJE_KEY };
     if (produtoId) { tx.produtoId = produtoId; tx.quantidade = quantidade; tx.custoTotal = custoTotal; }
     setTransacoes((arr) => [...arr, tx]);
     return tx;
   }, [setTransacoes]);
 
-  const registrarVendaComStock = useCallback(({ tipo, categoria, valor, nota, produtoId, quantidade }) => {
+  const registrarVendaComStock = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId, quantidade }) => {
     const p = produtos.find((x) => x.id === produtoId);
     if (!p) return { erro: 'Esse produto já não existe no stock.' };
     if (quantidade > p.quantidade) return { erro: `Só tens ${p.quantidade} unidades de "${p.nome}" em stock.` };
     const custoTotal = quantidade * p.precoCusto;
     setProdutos((arr) => arr.map((x) => (x.id === produtoId ? { ...x, quantidade: x.quantidade - quantidade } : x)));
     const notaFinal = nota ? `${p.nome} x${quantidade} · ${nota}` : `${p.nome} x${quantidade}`;
-    addTransacao({ tipo, categoria, valor, nota: notaFinal, produtoId, quantidade, custoTotal });
+    addTransacao({ tipo, categoria, valor, nota: notaFinal, setor, produtoId, quantidade, custoTotal });
     return { ok: true };
   }, [produtos, setProdutos, addTransacao]);
 
@@ -243,7 +287,8 @@ export function DataProvider({ children }) {
   const totalPoupancaCalc = useMemo(() => movimentosPoupanca.reduce((s, m) => (m.tipo === 'deposito' ? s + m.valor : s - m.valor), 0), [movimentosPoupanca]);
 
   const guardarPoupanca = useCallback((valor, nota) => {
-    const tx = addTransacao({ tipo: 'saida', categoria: 'poupanca', valor, nota: nota || 'Transferido para Poupança' });
+    // Assunção: retirada para poupança sai do saldo de Produtos (dinheiro geral do bolso).
+    const tx = addTransacao({ tipo: 'saida', categoria: 'poupanca', valor, nota: nota || 'Transferido para Poupança', setor: 'produtos' });
     setMovimentosPoupanca((arr) => [...arr, { id: novoId(), tipo: 'deposito', valor, nota, timestamp: tx.timestamp, dateKey: HOJE_KEY, txId: tx.id }]);
   }, [addTransacao, setMovimentosPoupanca]);
 
@@ -282,7 +327,7 @@ export function DataProvider({ children }) {
     if (!fiado) return;
     const custoProporcional = fiado.custoTotal ? Math.round((fiado.custoTotal * (valor / fiado.valorTotal)) * 100) / 100 : 0;
     addTransacao({
-      tipo: 'entrada', categoria, valor, nota,
+      tipo: 'entrada', categoria, valor, nota, setor: 'produtos', // fiado é sempre venda de produtos
       produtoId: fiado.produtoStockId && custoProporcional > 0 ? fiado.produtoStockId : null,
       custoTotal: custoProporcional,
     });
@@ -391,7 +436,10 @@ export function DataProvider({ children }) {
     transacoes, saldoInicialMap, participantes, pagamentos, entregas, movimentosPoupanca, fiados, produtos, usuarioNome,
     carregandoDados,
     setUsuarioNome: setUsuarioNomeState,
-    getSaldoInicial, saldoInicialDefinidoHoje, saldoFechamentoDia, sugestaoSaldoInicial, setSaldoInicialHoje,
+    getSaldoInicial, saldoFechamentoDia,
+    getSaldoInicialSetor, saldoInicialSetorDefinidoHoje, setSaldoInicialSetorHoje, sugestaoSaldoInicialSetor,
+    saldoFechamentoDiaSetor, precisaMigrarSaldoInicialHoje, saldoInicialLegadoHoje,
+    saldoProdutosHoje, saldoMaquinaHoje, totalEntradasSetorHoje, totalSaidasSetorHoje,
     doHoje, totalEntradasHoje, totalSaidasHoje, saldoHoje, totalProdutosHoje, totalMaquinaHoje, lucroRealHojeCalc,
     addTransacao, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias,
     pagouHoje, salvarParticipante, deleteParticipante, desmarcarPagamento, registrarPagamento,

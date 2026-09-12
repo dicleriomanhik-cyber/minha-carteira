@@ -25,10 +25,20 @@ function ChipCategoria({ cat, selecionada, onClick }) {
   );
 }
 
+const SETOR_INFO = {
+  produtos: { label: 'Produtos', icon: '🧺' },
+  maquina: { label: 'Máquina', icon: '⚙️' },
+};
+
+// Categorias cujo setor é automático (não perguntamos ao utilizador).
+const SETOR_AUTOMATICO_POR_CATEGORIA = { venda: 'produtos', maquina: 'maquina' };
+
 export default function Caixa() {
   const {
     doHoje, totalEntradasHoje, totalSaidasHoje, saldoHoje, totalProdutosHoje, totalMaquinaHoje, lucroRealHojeCalc,
-    getSaldoInicial, saldoInicialDefinidoHoje, sugestaoSaldoInicial, setSaldoInicialHoje,
+    saldoProdutosHoje, saldoMaquinaHoje, totalEntradasSetorHoje, totalSaidasSetorHoje,
+    getSaldoInicialSetor, saldoInicialSetorDefinidoHoje, sugestaoSaldoInicialSetor, setSaldoInicialSetorHoje,
+    precisaMigrarSaldoInicialHoje, saldoInicialLegadoHoje,
     addTransacao, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias, saldoFechamentoDia, produtos,
   } = useData();
   const { confirmar, avisar } = useDialog();
@@ -36,24 +46,39 @@ export default function Caixa() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState(null); // 'entrada' | 'saida' | null
   const [categoria, setCategoria] = useState(null);
+  const [setorTransacao, setSetorTransacao] = useState(null);
   const [valor, setValor] = useState('');
   const [nota, setNota] = useState('');
   const [produtoId, setProdutoId] = useState('');
   const [qtdVenda, setQtdVenda] = useState('1');
-  const [modalSaldoAberto, setModalSaldoAberto] = useState(false);
+
+  // Modal "definir saldo inicial" — agora por setor (produtos OU máquina)
+  const [setorSaldoAberto, setSetorSaldoAberto] = useState(null); // 'produtos' | 'maquina' | null
   const [valorSaldo, setValorSaldo] = useState('');
 
+  // Modal de migração: força a divisão do saldo antigo (único) entre os 2 setores
+  const [migProdutos, setMigProdutos] = useState('');
+  const [migMaquina, setMigMaquina] = useState('');
+
   const lucro = lucroRealHojeCalc();
-  const saldoInicial = getSaldoInicial(HOJE_KEY);
-  const definido = saldoInicialDefinidoHoje();
+
+  const setorAutomatico = categoria ? SETOR_AUTOMATICO_POR_CATEGORIA[categoria] : null;
+  const setorEfetivo = setorAutomatico || setorTransacao;
 
   function abrirModal(tipo) {
     setModalTipo(tipo);
     setCategoria(null);
+    setSetorTransacao(null);
     setValor('');
     setNota('');
     setProdutoId('');
     setQtdVenda('1');
+  }
+
+  function onSelecionarCategoria(c) {
+    setCategoria(c);
+    // Se a categoria tiver setor automático, já não é preciso escolher.
+    setSetorTransacao(SETOR_AUTOMATICO_POR_CATEGORIA[c] || null);
   }
 
   function onSelecionarProduto(id) {
@@ -73,28 +98,38 @@ export default function Caixa() {
   async function salvar() {
     const v = parseFloat(valor);
     if (!categoria) { await avisar('Escolhe uma categoria.'); return; }
+    if (!setorEfetivo) { await avisar('Escolhe a que setor pertence: Produtos ou Máquina.'); return; }
     if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
 
     if (categoria === 'venda' && produtoId) {
       const qtd = parseInt(qtdVenda) || 1;
-      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), produtoId, quantidade: qtd });
+      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, produtoId, quantidade: qtd });
       if (res.erro) { await avisar(res.erro); return; }
     } else {
-      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim() });
+      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo });
     }
     setModalTipo(null);
   }
 
-  function abrirSaldoInicial() {
-    setValorSaldo(sugestaoSaldoInicial() ? sugestaoSaldoInicial().toFixed(2) : '');
-    setModalSaldoAberto(true);
+  function abrirSaldoInicial(setor) {
+    const sugestao = sugestaoSaldoInicialSetor(setor);
+    setValorSaldo(sugestao ? sugestao.toFixed(2) : '');
+    setSetorSaldoAberto(setor);
   }
 
   async function confirmarSaldoInicial() {
     const v = parseFloat(valorSaldo);
     if (isNaN(v) || v < 0) { await avisar('Introduz um valor válido (pode ser 0).'); return; }
-    setSaldoInicialHoje(v);
-    setModalSaldoAberto(false);
+    setSaldoInicialSetorHoje(setorSaldoAberto, v);
+    setSetorSaldoAberto(null);
+  }
+
+  async function confirmarMigracaoSaldo() {
+    const p = parseFloat(migProdutos) || 0;
+    const m = parseFloat(migMaquina) || 0;
+    if (p < 0 || m < 0) { await avisar('Introduz valores válidos (podem ser 0).'); return; }
+    setSaldoInicialSetorHoje('produtos', p);
+    setSaldoInicialSetorHoje('maquina', m);
   }
 
   return (
@@ -102,41 +137,49 @@ export default function Caixa() {
       <AlertBanner />
 
       <HeroCard
-        label="Saldo"
+        label="Saldo Total (automático)"
         valor={saldoHoje}
-        acao={
-          <button
-            onClick={abrirSaldoInicial}
-            className={`mb-3 flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs ${definido ? 'bg-white/5' : 'bg-[var(--mango)]/20'}`}
-          >
-            <span className="text-[var(--paper)]/70">
-              Saldo inicial: <b className="text-[var(--paper)]">{formatMoney(saldoInicial)} MT</b>
-            </span>
-            <span className="font-semibold text-[var(--mango)]">{definido ? 'editar' : 'definir agora'}</span>
-          </button>
-        }
         sub={
           <>
             <span>Entradas <b className="font-mono-ref text-[var(--paper)]">{formatMoney(totalEntradasHoje)}</b></span>
             <span>Saídas <b className="font-mono-ref text-[var(--paper)]">{formatMoney(totalSaidasHoje)}</b></span>
+            <span>📈 Lucro Real <b className="font-mono-ref text-[var(--paper)]">{formatMoney(lucro.lucro)} MT</b></span>
           </>
         }
       >
-        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/10 pt-4">
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--paper)]/50">🧺 Produtos</div>
-            <div className="font-mono-ref mt-0.5 text-sm font-semibold">{formatMoney(totalProdutosHoje)} MT</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--paper)]/50">⚙️ Máquina</div>
-            <div className="font-mono-ref mt-0.5 text-sm font-semibold">{formatMoney(totalMaquinaHoje)} MT</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--paper)]/50">📈 Lucro Real</div>
-            <div className="font-mono-ref mt-0.5 text-sm font-semibold">{formatMoney(lucro.lucro)} MT</div>
-          </div>
-        </div>
+        <p className="mt-3 text-[11px] text-[var(--paper)]/50">Soma automática de Produtos + Máquina. Não se define aqui — define-se em cada setor abaixo.</p>
       </HeroCard>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {['produtos', 'maquina'].map((setor) => {
+          const info = SETOR_INFO[setor];
+          const saldoSetor = setor === 'produtos' ? saldoProdutosHoje : saldoMaquinaHoje;
+          const definidoSetor = saldoInicialSetorDefinidoHoje(setor);
+          return (
+            <section key={setor} className="rounded-2xl bg-[var(--ink)] p-4 text-[var(--paper)]">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--paper)]/60">{info.icon} Saldo {info.label}</p>
+              <p className="font-display mt-1 text-xl font-bold leading-none">
+                {formatMoney(saldoSetor)}
+                <span className="ml-1 text-xs font-semibold text-[var(--paper)]/50">MT</span>
+              </p>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-[var(--paper)]/70">
+                <span>Ent. <b className="font-mono-ref text-[var(--paper)]">{formatMoney(totalEntradasSetorHoje(setor))}</b></span>
+                <span>Saí. <b className="font-mono-ref text-[var(--paper)]">{formatMoney(totalSaidasSetorHoje(setor))}</b></span>
+              </div>
+              <button
+                onClick={() => abrirSaldoInicial(setor)}
+                disabled={precisaMigrarSaldoInicialHoje}
+                className={`mt-3 flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] disabled:opacity-40 ${definidoSetor ? 'bg-white/5' : 'bg-[var(--mango)]/20'}`}
+              >
+                <span className="text-[var(--paper)]/70">
+                  Inicial: <b className="text-[var(--paper)]">{formatMoney(getSaldoInicialSetor(HOJE_KEY, setor))}</b>
+                </span>
+                <span className="font-semibold text-[var(--mango)]">{definidoSetor ? 'editar' : 'definir'}</span>
+              </button>
+            </section>
+          );
+        })}
+      </div>
 
       <div className="mt-4 flex gap-3">
         <button onClick={() => abrirModal('entrada')} className="flex-1 rounded-xl bg-[var(--teal)] py-3 text-sm font-semibold text-white active:scale-[0.98]">+ Entrada</button>
@@ -155,7 +198,12 @@ export default function Caixa() {
                 <div key={t.id} className="flex items-center gap-3 border-b border-dashed border-[var(--ink)]/10 py-3 last:border-none">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-soft)] text-base">{cat.icon}</div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13.5px] font-semibold text-[var(--ink)]">{cat.label}</div>
+                    <div className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold text-[var(--ink)]">
+                      {cat.label}
+                      <span className="rounded-full bg-[var(--bg-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-soft)]">
+                        {SETOR_INFO[t.setor || 'produtos'].icon} {SETOR_INFO[t.setor || 'produtos'].label}
+                      </span>
+                    </div>
                     {t.nota && <div className="truncate text-[12px] text-[var(--ink-soft)]">{t.nota}</div>}
                     <div className="text-[11px] text-[var(--ink-soft)]">{formatHora(t.timestamp)}</div>
                   </div>
@@ -202,9 +250,34 @@ export default function Caixa() {
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {modalTipo && CATEGORIAS[modalTipo].map((c) => (
-              <ChipCategoria key={c.id} cat={c} selecionada={categoria === c.id} onClick={() => setCategoria(c.id)} />
+              <ChipCategoria key={c.id} cat={c} selecionada={categoria === c.id} onClick={() => onSelecionarCategoria(c.id)} />
             ))}
           </div>
+
+          {categoria && (
+            setorAutomatico ? (
+              <p className="text-xs text-[var(--ink-soft)]">
+                Setor: <b className="text-[var(--ink)]">{SETOR_INFO[setorAutomatico].icon} {SETOR_INFO[setorAutomatico].label}</b> (automático)
+              </p>
+            ) : (
+              <Campo label="Setor">
+                <div className="flex gap-2">
+                  {Object.entries(SETOR_INFO).map(([id, info]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setSetorTransacao(id)}
+                      className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                        setorTransacao === id ? 'bg-[var(--mango)] text-[var(--mango-ink)]' : 'bg-[var(--bg-soft)] text-[var(--ink)]'
+                      }`}
+                    >
+                      {info.icon} {info.label}
+                    </button>
+                  ))}
+                </div>
+              </Campo>
+            )
+          )}
 
           {modalTipo === 'entrada' && categoria === 'venda' && (
             <>
@@ -236,15 +309,38 @@ export default function Caixa() {
         </div>
       </Modal>
 
-      {/* Modal Saldo Inicial */}
-      <Modal titulo="Saldo Inicial de Hoje" aberto={modalSaldoAberto} aoFechar={() => setModalSaldoAberto(false)}>
-        <p className="mb-3 text-sm text-[var(--ink-soft)]">Quanto dinheiro físico do negócio já tens no bolso agora, antes de qualquer venda de hoje?</p>
+      {/* Modal Saldo Inicial por setor */}
+      <Modal
+        titulo={setorSaldoAberto ? `Saldo Inicial — ${SETOR_INFO[setorSaldoAberto].icon} ${SETOR_INFO[setorSaldoAberto].label}` : ''}
+        aberto={!!setorSaldoAberto}
+        aoFechar={() => setSetorSaldoAberto(null)}
+      >
+        <p className="mb-3 text-sm text-[var(--ink-soft)]">Quanto dinheiro físico do setor {setorSaldoAberto && SETOR_INFO[setorSaldoAberto].label} já tens no bolso agora, antes de qualquer movimento de hoje?</p>
         <Campo label="Valor (MT)">
           <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorSaldo} onChange={(e) => setValorSaldo(e.target.value)} />
         </Campo>
         <div className="mt-4 flex gap-2">
-          <Botao variante="secundario" onClick={() => setModalSaldoAberto(false)}>Cancelar</Botao>
+          <Botao variante="secundario" onClick={() => setSetorSaldoAberto(null)}>Cancelar</Botao>
           <Botao onClick={confirmarSaldoInicial}>Guardar</Botao>
+        </div>
+      </Modal>
+
+      {/* Modal de migração: força dividir o antigo saldo único entre os 2 setores */}
+      <Modal titulo="Dividir o Saldo Inicial" aberto={precisaMigrarSaldoInicialHoje} aoFechar={() => {}}>
+        <p className="mb-3 text-sm text-[var(--ink-soft)]">
+          Agora o saldo é separado por setor. Tinhas um saldo inicial único de{' '}
+          <b className="text-[var(--ink)]">{formatMoney(saldoInicialLegadoHoje || 0)} MT</b> hoje — divide esse valor entre Produtos e Máquina (a soma pode ser igual ao valor antigo, ou ajusta como preferires).
+        </p>
+        <div className="space-y-3">
+          <Campo label="🧺 Produtos (MT)">
+            <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={migProdutos} onChange={(e) => setMigProdutos(e.target.value)} />
+          </Campo>
+          <Campo label="⚙️ Máquina (MT)">
+            <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={migMaquina} onChange={(e) => setMigMaquina(e.target.value)} />
+          </Campo>
+        </div>
+        <div className="mt-4">
+          <Botao onClick={confirmarMigracaoSaldo}>Guardar divisão</Botao>
         </div>
       </Modal>
     </Layout>
