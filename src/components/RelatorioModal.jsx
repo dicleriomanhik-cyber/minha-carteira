@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Modal from './Modal';
 import PillButton from './PillButton';
 import { useData } from '../context/DataContext';
+import { CAT_LOOKUP } from '../context/DataContext';
 import { formatMoney, formatDataCurta, periodoLabel, HOJE_KEY, seteDiasAtrasKey } from '../utils/format';
 
 function dentroPeriodo(dk, periodo) {
@@ -16,6 +17,19 @@ function Linha({ label, valor }) {
     <div className="flex items-center justify-between py-1.5 text-sm">
       <span className="text-[var(--ink-soft)]">{label}</span>
       <span className="font-mono-ref font-semibold text-[var(--ink)]">{formatMoney(valor)} MT</span>
+    </div>
+  );
+}
+
+function LinhaSaidaSetor({ label, produtos, maquina, total, destaque }) {
+  return (
+    <div className={`flex items-center justify-between py-1.5 text-sm ${destaque ? 'font-semibold' : ''}`}>
+      <span className={destaque ? 'text-[var(--ink)]' : 'text-[var(--ink-soft)]'}>{label}</span>
+      <span className="font-mono-ref flex gap-3 text-[var(--ink)]">
+        <span className="w-16 text-right text-[var(--ink-soft)]">{formatMoney(produtos)}</span>
+        <span className="w-16 text-right text-[var(--ink-soft)]">{formatMoney(maquina)}</span>
+        <span className="w-16 text-right font-semibold">{formatMoney(total)}</span>
+      </span>
     </div>
   );
 }
@@ -57,7 +71,22 @@ export default function RelatorioModal({ aberto, aoFechar }) {
     });
     const porDia = Array.from(porDiaMap.values()).sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
 
-    return { totalEntradas, totalSaidas, totalProdutos, totalMaquina, pagXitique, entXitique, guardadoPoupanca, retiradoPoupanca, recebidoFiados, emAbertoFiados, receitaStock, custoStock, porDia };
+    // Saídas: resumo de todos os movimentos de saída (todas as áreas do Caixa), por categoria e por setor.
+    const categoriasSaidaPresentes = [...new Set(txs.filter((t) => t.tipo === 'saida').map((t) => t.categoria))];
+    const saidasPorCategoria = categoriasSaidaPresentes.map((catId) => {
+      const doCat = txs.filter((t) => t.tipo === 'saida' && t.categoria === catId);
+      const produtos = doCat.filter((t) => (t.setor || 'produtos') === 'produtos').reduce((s, t) => s + t.valor, 0);
+      const maquina = doCat.filter((t) => t.setor === 'maquina').reduce((s, t) => s + t.valor, 0);
+      return { categoria: catId, produtos, maquina, total: produtos + maquina };
+    }).sort((a, b) => b.total - a.total);
+    const saidasProdutosTotal = saidasPorCategoria.reduce((s, c) => s + c.produtos, 0);
+    const saidasMaquinaTotal = saidasPorCategoria.reduce((s, c) => s + c.maquina, 0);
+
+    return {
+      totalEntradas, totalSaidas, totalProdutos, totalMaquina, pagXitique, entXitique, guardadoPoupanca, retiradoPoupanca,
+      recebidoFiados, emAbertoFiados, receitaStock, custoStock, porDia,
+      saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal,
+    };
   }, [periodo, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado]);
 
   return (
@@ -75,6 +104,28 @@ export default function RelatorioModal({ aberto, aoFechar }) {
         <Linha label="🧺 Produtos" valor={dados.totalProdutos} />
         <Linha label="⚙️ Máquina" valor={dados.totalMaquina} />
         <Linha label="Saídas" valor={dados.totalSaidas} />
+      </Seccao>
+
+      <Seccao titulo="Saídas (todas as áreas)">
+        {dados.saidasPorCategoria.length === 0 ? (
+          <p className="py-2 text-sm text-[var(--ink-soft)]">Sem saídas neste período.</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">
+              <span>Categoria</span>
+              <span className="flex gap-3">
+                <span className="w-16 text-right">🧺 Prod.</span>
+                <span className="w-16 text-right">⚙️ Máq.</span>
+                <span className="w-16 text-right">Total</span>
+              </span>
+            </div>
+            {dados.saidasPorCategoria.map((c) => {
+              const cat = CAT_LOOKUP[c.categoria] || { icon: '💰', label: c.categoria };
+              return <LinhaSaidaSetor key={c.categoria} label={`${cat.icon} ${cat.label}`} produtos={c.produtos} maquina={c.maquina} total={c.total} />;
+            })}
+            <LinhaSaidaSetor label="Total Geral" produtos={dados.saidasProdutosTotal} maquina={dados.saidasMaquinaTotal} total={dados.totalSaidas} destaque />
+          </>
+        )}
       </Seccao>
 
       {periodo !== 'dia' && dados.porDia.length > 0 && (
