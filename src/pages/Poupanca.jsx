@@ -4,40 +4,45 @@ import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
 import Modal from '../components/Modal';
+import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
 import { useData } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
-import { formatMoney, formatDataExtenso, formatHora } from '../utils/format';
+import { formatMoney, formatDataExtenso, formatHora, HOJE_KEY } from '../utils/format';
 
 export default function Poupanca() {
   const {
     totalPoupancaCalc, guardadoMesAtual, movimentosPoupanca,
-    guardarPoupanca, retirarPoupanca, deleteMovimentoPoupanca, saldoHoje,
+    guardarPoupanca, retirarPoupanca, deleteMovimentoPoupanca, saldoFechamentoDia,
   } = useData();
   const { confirmar, avisar } = useDialog();
 
   const [modalGuardar, setModalGuardar] = useState(false);
   const [valorGuardar, setValorGuardar] = useState('');
   const [notaGuardar, setNotaGuardar] = useState('');
+  const [diaGuardar, setDiaGuardar] = useState(HOJE_KEY);
 
   const [modalRetirar, setModalRetirar] = useState(false);
   const [valorRetirar, setValorRetirar] = useState('');
   const [notaRetirar, setNotaRetirar] = useState('');
+  const [diaRetirar, setDiaRetirar] = useState(HOJE_KEY);
 
   function abrirGuardar() {
     setValorGuardar('');
     setNotaGuardar('');
+    setDiaGuardar(HOJE_KEY);
     setModalGuardar(true);
   }
 
   async function confirmarGuardarFn() {
     const v = parseFloat(valorGuardar);
     if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
-    if (v > saldoHoje + 0.01) {
-      await avisar('Esse valor é maior que o Saldo na Mão de hoje (' + formatMoney(saldoHoje) + ' MT). Confirma o valor no Caixa do Dia primeiro.');
+    const saldoDoDia = saldoFechamentoDia(diaGuardar);
+    if (v > saldoDoDia + 0.01) {
+      await avisar('Esse valor é maior que o Saldo na Mão desse dia (' + formatMoney(saldoDoDia) + ' MT). Confirma o valor no Caixa do Dia primeiro.');
       return;
     }
-    guardarPoupanca(v, notaGuardar.trim());
+    guardarPoupanca(v, notaGuardar.trim(), diaGuardar);
     setModalGuardar(false);
   }
 
@@ -45,6 +50,7 @@ export default function Poupanca() {
     if (totalPoupancaCalc <= 0) { await avisar('Ainda não há dinheiro guardado na Poupança.'); return; }
     setValorRetirar('');
     setNotaRetirar('');
+    setDiaRetirar(HOJE_KEY);
     setModalRetirar(true);
   }
 
@@ -52,7 +58,7 @@ export default function Poupanca() {
     const v = parseFloat(valorRetirar);
     if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
     if (v > totalPoupancaCalc + 0.01) { await avisar('Esse valor é maior que a tua Poupança total (' + formatMoney(totalPoupancaCalc) + ' MT).'); return; }
-    retirarPoupanca(v, notaRetirar.trim());
+    retirarPoupanca(v, notaRetirar.trim(), diaRetirar);
     setModalRetirar(false);
   }
 
@@ -102,6 +108,9 @@ export default function Poupanca() {
       {/* Modal Guardar */}
       <Modal titulo="Guardar da Caixa do Dia" aberto={modalGuardar} aoFechar={() => setModalGuardar(false)}>
         <div className="space-y-4">
+          <Campo label="Dia">
+            <SeletorDia value={diaGuardar} onChange={setDiaGuardar} />
+          </Campo>
           <Campo label="Valor a Guardar (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorGuardar} onChange={(e) => setValorGuardar(e.target.value)} />
           </Campo>
@@ -118,6 +127,9 @@ export default function Poupanca() {
       {/* Modal Retirar */}
       <Modal titulo="Retirar da Poupança" aberto={modalRetirar} aoFechar={() => setModalRetirar(false)}>
         <div className="space-y-4">
+          <Campo label="Dia">
+            <SeletorDia value={diaRetirar} onChange={setDiaRetirar} />
+          </Campo>
           <Campo label="Valor a Retirar (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorRetirar} onChange={(e) => setValorRetirar(e.target.value)} />
           </Campo>

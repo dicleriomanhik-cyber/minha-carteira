@@ -4,6 +4,7 @@ import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
 import Modal from '../components/Modal';
+import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
 import AlertBanner from '../components/AlertBanner';
 import { useData } from '../context/DataContext';
@@ -51,6 +52,7 @@ export default function Caixa() {
   const [nota, setNota] = useState('');
   const [produtoId, setProdutoId] = useState('');
   const [qtdVenda, setQtdVenda] = useState('1');
+  const [diaTransacao, setDiaTransacao] = useState(HOJE_KEY);
 
   // Modal "definir saldo inicial" — agora por setor (produtos OU máquina)
   const [setorSaldoAberto, setSetorSaldoAberto] = useState(null); // 'produtos' | 'maquina' | null
@@ -73,6 +75,7 @@ export default function Caixa() {
     setNota('');
     setProdutoId('');
     setQtdVenda('1');
+    setDiaTransacao(HOJE_KEY);
   }
 
   function onSelecionarCategoria(c) {
@@ -103,10 +106,10 @@ export default function Caixa() {
 
     if (categoria === 'venda' && produtoId) {
       const qtd = parseInt(qtdVenda) || 1;
-      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, produtoId, quantidade: qtd });
+      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, produtoId, quantidade: qtd, dateKey: diaTransacao });
       if (res.erro) { await avisar(res.erro); return; }
     } else {
-      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo });
+      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, dateKey: diaTransacao });
     }
     setModalTipo(null);
   }
@@ -248,6 +251,13 @@ export default function Caixa() {
       {/* Modal Nova Transação */}
       <Modal titulo={modalTipo === 'entrada' ? 'Nova Entrada' : 'Nova Saída'} aberto={!!modalTipo} aoFechar={() => setModalTipo(null)}>
         <div className="space-y-4">
+          <Campo label="Dia">
+            <SeletorDia value={diaTransacao} onChange={setDiaTransacao} />
+            {diaTransacao !== HOJE_KEY && (
+              <p className="mt-1.5 text-[11px] text-[var(--mango)]">A registar para um dia anterior — não vai aparecer em "Registos de Hoje", mas sim em "Ver dias anteriores".</p>
+            )}
+          </Campo>
+
           <div className="flex flex-wrap gap-2">
             {modalTipo && CATEGORIAS[modalTipo].map((c) => (
               <ChipCategoria key={c.id} cat={c} selecionada={categoria === c.id} onClick={() => onSelecionarCategoria(c.id)} />

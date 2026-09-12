@@ -4,15 +4,16 @@ import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
 import Modal from '../components/Modal';
+import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
 import Linha from '../components/Linha';
 import { useData } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
-import { formatMoney, formatDataExtenso, iniciais } from '../utils/format';
+import { formatMoney, formatDataExtenso, iniciais, HOJE_KEY } from '../utils/format';
 
 export default function Xitique() {
   const {
-    participantes, pagouHoje, salvarParticipante, deleteParticipante, desmarcarPagamento, registrarPagamento,
+    participantes, pagouHoje, pagouDia, salvarParticipante, deleteParticipante, desmarcarPagamento, registrarPagamento,
     totalGuardadoXitique, registrarEntrega, deleteEntrega, entregas,
   } = useData();
   const { confirmar, avisar } = useDialog();
@@ -25,10 +26,12 @@ export default function Xitique() {
 
   const [modalPagamento, setModalPagamento] = useState(null); // participante
   const [valorPagamento, setValorPagamento] = useState('');
+  const [diaPagamento, setDiaPagamento] = useState(HOJE_KEY);
 
   const [modalEntrega, setModalEntrega] = useState(false);
   const [valorEntrega, setValorEntrega] = useState('');
   const [quemRecebeu, setQuemRecebeu] = useState('');
+  const [diaEntrega, setDiaEntrega] = useState(HOJE_KEY);
 
   function abrirNovoParticipante() {
     setEditandoId(null);
@@ -72,12 +75,14 @@ export default function Xitique() {
     }
     setModalPagamento(p);
     setValorPagamento(p.valorCombinado);
+    setDiaPagamento(HOJE_KEY);
   }
 
   async function confirmarPagamento() {
     const v = parseFloat(valorPagamento);
     if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
-    registrarPagamento(modalPagamento.id, v);
+    if (pagouDia(modalPagamento.id, diaPagamento)) { await avisar('Já há um pagamento registado para esse dia. Apaga-o primeiro se quiseres corrigir o valor.'); return; }
+    registrarPagamento(modalPagamento.id, v, diaPagamento);
     setModalPagamento(null);
   }
 
@@ -87,6 +92,7 @@ export default function Xitique() {
     if (participantes.length === 0) { await avisar('Adiciona primeiro pelo menos um participante — a entrega só pode ser feita a alguém da lista.'); return; }
     setValorEntrega(total.toFixed(2));
     setQuemRecebeu(participantes[0].id);
+    setDiaEntrega(HOJE_KEY);
     setModalEntrega(true);
   }
 
@@ -96,7 +102,7 @@ export default function Xitique() {
     if (!quemRecebeu) { await avisar('Escolhe quem recebeu a entrega.'); return; }
     if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
     if (v > total + 0.01) { await avisar('Esse valor é maior que o total guardado (' + formatMoney(total) + ' MT).'); return; }
-    registrarEntrega(v, quemRecebeu);
+    registrarEntrega(v, quemRecebeu, diaEntrega);
     setModalEntrega(false);
   }
 
@@ -196,6 +202,9 @@ export default function Xitique() {
       {/* Modal Pagamento */}
       <Modal titulo={modalPagamento ? `Pagamento de ${modalPagamento.nome}` : ''} aberto={!!modalPagamento} aoFechar={() => setModalPagamento(null)}>
         <div className="space-y-4">
+          <Campo label="Dia">
+            <SeletorDia value={diaPagamento} onChange={setDiaPagamento} />
+          </Campo>
           <Campo label="Valor Recebido (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorPagamento} onChange={(e) => setValorPagamento(e.target.value)} />
           </Campo>
@@ -209,6 +218,9 @@ export default function Xitique() {
       {/* Modal Entrega */}
       <Modal titulo="Registar Entrega do Xitique" aberto={modalEntrega} aoFechar={() => setModalEntrega(false)}>
         <div className="space-y-4">
+          <Campo label="Dia">
+            <SeletorDia value={diaEntrega} onChange={setDiaEntrega} />
+          </Campo>
           <Campo label="Valor Entregue (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorEntrega} onChange={(e) => setValorEntrega(e.target.value)} />
           </Campo>
