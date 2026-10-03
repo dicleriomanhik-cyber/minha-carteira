@@ -7,11 +7,14 @@ import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Linha from '../components/Linha';
+import PillButton from '../components/PillButton';
+import ProdutosLucroModal from '../components/ProdutosLucroModal';
 import { useData, METODOS } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, dateKey } from '../utils/format';
+import { sugerirPreco } from '../utils/produtosLucro';
 
-const CAMPOS_VAZIOS = { nome: '', quantidade: '', precoCusto: '', precoVenda: '', alertaEm: '3', pacoteCusto: '', pacoteUn: '' };
+const CAMPOS_VAZIOS = { nome: '', quantidade: '', precoCusto: '', precoVenda: '', alertaEm: '3', pacoteCusto: '', pacoteUn: '', sugModo: 'pct', sugValor: '' };
 
 export default function Produtos() {
   const { produtos, salvarProduto, deleteProduto, reporProduto, lucroRealHojeCalc, registrarVendaComStock, salvarFiado } = useData();
@@ -19,6 +22,7 @@ export default function Produtos() {
   const { receita, custo, lucro } = lucroRealHojeCalc();
 
   const [modalAberto, setModalAberto] = useState(false);
+  const [lucroAberto, setLucroAberto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [campos, setCampos] = useState(CAMPOS_VAZIOS);
 
@@ -80,7 +84,7 @@ export default function Produtos() {
 
   function abrirEditar(p) {
     setEditandoId(p.id);
-    setCampos({ nome: p.nome, quantidade: p.quantidade, precoCusto: p.precoCusto, precoVenda: p.precoVenda, alertaEm: p.alertaEm ?? 3, pacoteCusto: '', pacoteUn: '' });
+    setCampos({ nome: p.nome, quantidade: p.quantidade, precoCusto: p.precoCusto, precoVenda: p.precoVenda, alertaEm: p.alertaEm ?? 3, pacoteCusto: '', pacoteUn: '', sugModo: 'pct', sugValor: '' });
     setModalAberto(true);
   }
 
@@ -139,6 +143,14 @@ export default function Produtos() {
         Só entra aqui o que vendes com o botão Vender, ou com "Produto do stock" ligado na Nova Entrada ou num Fiado.
       </p>
 
+      <button onClick={() => setLucroAberto(true)} className="mt-4 flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
+        <span>
+          <span className="block text-sm font-semibold text-[var(--ink)]">Produtos mais lucrativos</span>
+          <span className="mt-0.5 block text-xs text-[var(--ink-soft)]">Vê quais ganham mais e quais estão parados</span>
+        </span>
+        <span aria-hidden="true" className="text-[var(--ink)]">›</span>
+      </button>
+
       <div className="mt-6 flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Produtos em Stock</p>
         <button onClick={abrirNovo} className="text-xs font-semibold text-[var(--mango)]">+ Produto</button>
@@ -174,6 +186,8 @@ export default function Produtos() {
         )}
       </section>
 
+      <ProdutosLucroModal aberto={lucroAberto} aoFechar={() => setLucroAberto(false)} />
+
       {/* Modal Produto */}
       <Modal titulo={editandoId ? 'Editar Produto' : '+ Produto'} aberto={modalAberto} aoFechar={() => setModalAberto(false)}>
         <div className="space-y-4">
@@ -194,6 +208,27 @@ export default function Produtos() {
           <Campo label="Preço de Custo — por unidade (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={campos.precoCusto} onChange={(e) => setCampos((c) => ({ ...c, precoCusto: e.target.value }))} />
           </Campo>
+          {(() => {
+            const sug = sugerirPreco(campos.precoCusto, campos.sugModo, campos.sugValor);
+            return (
+              <div className="rounded-2xl bg-[var(--bg-soft)] p-3">
+                <p className="text-xs font-semibold text-[var(--ink)]">Sugestor de preço</p>
+                <p className="mt-0.5 text-xs text-[var(--ink-soft)]">Diz quanto queres ganhar e a app calcula o preço de venda.</p>
+                <div className="mt-2 flex gap-2">
+                  <PillButton type="button" ativo={campos.sugModo === 'pct'} onClick={() => setCampos((c) => ({ ...c, sugModo: 'pct' }))}>Percentagem %</PillButton>
+                  <PillButton type="button" ativo={campos.sugModo === 'valor'} onClick={() => setCampos((c) => ({ ...c, sugModo: 'valor' }))}>Valor em MT</PillButton>
+                </div>
+                <input className="campo mt-2" type="number" inputMode="decimal" min="0" step="0.01" placeholder={campos.sugModo === 'pct' ? 'Quanto % acima do custo' : 'Quantos MT por unidade'} value={campos.sugValor} onChange={(e) => setCampos((c) => ({ ...c, sugValor: e.target.value }))} />
+                {sug && (
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold text-[var(--ink)]">Preço sugerido: {formatMoney(sug.preco)} MT <span className="font-normal text-[var(--ink-soft)]">(ganhas {formatMoney(sug.ganho)} MT por unidade)</span></p>
+                    <button type="button" onClick={() => setCampos((c) => ({ ...c, precoVenda: String(sug.preco) }))} className="shrink-0 rounded-full bg-[var(--mango)] px-3 py-1.5 text-xs font-semibold text-[var(--mango-ink)]">Usar</button>
+                  </div>
+                )}
+                {!sug && campos.sugValor !== '' && <p className="mt-2 text-xs text-[var(--ink-soft)]">Preenche primeiro o preço de custo por unidade.</p>}
+              </div>
+            );
+          })()}
           <Campo label="Preço de Venda — por unidade (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={campos.precoVenda} onChange={(e) => setCampos((c) => ({ ...c, precoVenda: e.target.value }))} />
           </Campo>
