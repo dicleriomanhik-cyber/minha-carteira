@@ -11,7 +11,6 @@ import Campo from '../components/Campo';
 import MensagemErro from '../components/MensagemErro';
 import { formatMoney } from '../utils/format';
 import DossieModal from '../components/DossieModal';
-import ReciboModal from '../components/ReciboModal';
 import { IconeCamara, IconeCaneta, IconeBackup } from '../components/Icons';
 
 function PillButton({ icon: Icon, label, onClick }) {
@@ -60,7 +59,6 @@ const GUIA = [
   ["Despesas", 'Aqui registas salários (o teu e os dos funcionários, com o nome da pessoa) e as despesas do negócio: renda, luz, água, internet, marketing, transporte, taxas bancárias, licenças e outras. Cada pagamento sai do saldo total do Caixa.'],
   ["Poupança", 'Cria metas, por exemplo "Comprar um Terreno", e vai guardando dinheiro nelas. O que guardas sai do saldo total do Caixa. O anel de cada meta mostra o quanto já conseguiste.'],
   ["Relatório", 'Toca em "Relatório" no topo para ver o resumo do dia, da semana, do mês ou de tudo: entradas, saídas, salários e despesas, fiados feitos e pagos, xitique e poupança.'],
-  ["Comprovativos", 'No Perfil, em "Comprovativos de pagamento", escolhes um salário, a renda ou outra despesa que já registaste, confirmas o nome de quem recebeu e escolhes PDF ou imagem. Depois envias por WhatsApp ou descarregas. É um comprovativo interno e não substitui factura nem recibo fiscal.'],
   ["Dossiê para crédito", 'No Perfil, em "Dossiê para pedir crédito", escolhes 3, 6 ou 12 meses e a app cria um PDF com vendas, lucro, despesas, fiados cobrados, stock e poupança, com gráfico mês a mês. Podes descarregar ou enviar por WhatsApp. Confere os registos antes de o entregares.'],
   ["Backup", 'No Perfil, exporta regularmente uma cópia dos teus dados. A tua conta também sincroniza os dados entre aparelhos.'],
 ];
@@ -85,7 +83,6 @@ export default function Perfil() {
   const [termosAberto, setTermosAberto] = useState(false);
   const [guiaAberto, setGuiaAberto] = useState(false);
   const [dossieAberto, setDossieAberto] = useState(false);
-  const [reciboAberto, setReciboAberto] = useState(false);
   const [ultimoBackup, setUltimoBackup] = useState(() => { try { return localStorage.getItem('carteira_ultimo_backup') || ''; } catch { return ''; } });
   function fazerExport() {
     exportarBackup();
@@ -198,17 +195,6 @@ export default function Perfil() {
         </div>
 
         <div className="mt-6 w-full">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Comprovativos</p>
-          <button onClick={() => setReciboAberto(true)} className="flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
-            <span>
-              <span className="block text-sm font-semibold text-[var(--ink)]">Comprovativos de pagamento</span>
-              <span className="mt-0.5 block text-xs text-[var(--ink-soft)]">Salário, renda e outras despesas, em PDF ou imagem</span>
-            </span>
-            <span aria-hidden="true" className="text-[var(--ink)]">›</span>
-          </button>
-        </div>
-
-        <div className="mt-6 w-full">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Crédito e financiamento</p>
           <button onClick={() => setDossieAberto(true)} className="flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
             <span>
@@ -262,7 +248,6 @@ export default function Perfil() {
       </div>
 
       <DossieModal aberto={dossieAberto} aoFechar={() => setDossieAberto(false)} />
-      <ReciboModal aberto={reciboAberto} aoFechar={() => setReciboAberto(false)} />
 
       {/* Editar informações */}
       <Modal titulo="Editar Informações" aberto={aEditar === true} aoFechar={() => setAEditar(false)}>

@@ -9,6 +9,9 @@ import Modal from '../components/Modal';
 import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
 import AlertBanner from '../components/AlertBanner';
+import FechoDiaModal from '../components/FechoDiaModal';
+import LembretesModal from '../components/LembretesModal';
+import { IconeFecho, IconeSino } from '../components/Icons';
 import { useData, METODOS } from '../context/DataContext';
 import { CATEGORIAS, CAT_LOOKUP } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
@@ -45,6 +48,8 @@ export default function Caixa() {
   const { confirmar, avisar } = useDialog();
 
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [fechoAberto, setFechoAberto] = useState(false);
+  const [lembretesAberto, setLembretesAberto] = useState(false);
   const [modalTipo, setModalTipo] = useState(null); // 'entrada' | 'saida' | null
   const [categoria, setCategoria] = useState(null);
   const [setorTransacao, setSetorTransacao] = useState(null);
@@ -111,7 +116,7 @@ export default function Caixa() {
 
   return (
     <Layout>
-      <AlertBanner />
+      <AlertBanner aoAbrirFecho={() => setFechoAberto(true)} aoAbrirLembretes={() => setLembretesAberto(true)} />
 
       <HeroCard
         label="Saldo Total"
@@ -159,6 +164,15 @@ export default function Caixa() {
       <div className="mt-4 flex gap-3">
         <button onClick={() => abrirModal('entrada')} className="flex-1 rounded-xl bg-[var(--teal)] py-3 text-sm font-semibold text-white active:scale-[0.98]">+ Entrada</button>
         <button onClick={() => abrirModal('saida')} className="flex-1 rounded-xl bg-[var(--brick)] py-3 text-sm font-semibold text-white active:scale-[0.98]">− Saída</button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <button onClick={() => setFechoAberto(true)} className="flex items-center justify-center gap-2 rounded-xl bg-[var(--paper)] py-3 text-[13px] font-semibold text-[var(--ink)] active:scale-[0.98]">
+          <IconeFecho className="h-5 w-5 text-[var(--mango)]" />Fecho do dia
+        </button>
+        <button onClick={() => setLembretesAberto(true)} className="flex items-center justify-center gap-2 rounded-xl bg-[var(--paper)] py-3 text-[13px] font-semibold text-[var(--ink)] active:scale-[0.98]">
+          <IconeSino className="h-5 w-5 text-[var(--mango)]" />Lembretes
+        </button>
       </div>
 
       <section className="mt-6 rounded-2xl bg-[var(--paper)] p-4">
@@ -294,6 +308,8 @@ export default function Caixa() {
         </div>
       </Modal>
 
+      <FechoDiaModal aberto={fechoAberto} aoFechar={() => setFechoAberto(false)} />
+      <LembretesModal aberto={lembretesAberto} aoFechar={() => setLembretesAberto(false)} />
     </Layout>
   );
 }

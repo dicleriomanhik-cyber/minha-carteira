@@ -37,3 +37,22 @@ export function IconeWhatsApp({ className = 'h-4 w-4' }) {
     </svg>
   );
 }
+
+export function IconeFecho({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="4" y="5" width="16" height="15" rx="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 10h16M8 3v4M16 3v4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m9 15 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconeSino({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15L6 17Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 21a2 2 0 0 0 4 0" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

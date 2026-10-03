@@ -9,14 +9,14 @@ App web (PWA) para pequenos negócios em Moçambique. Objectivo: ajudar o pequen
 - Moeda: MT (Metical). Idioma: português de Moçambique, tratamento por "tu".
 
 ## 2. Stack
-React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; Supabase (auth, tabela `profiles`, tabela `dados_financeiros`, bucket `avatars`). Variáveis de ambiente (ficheiro `.env`, NÃO está no zip): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. SQL de configuração: `supabase-setup.sql`.
+React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossiê em PDF); Supabase (auth, tabela `profiles`, tabela `dados_financeiros`, bucket `avatars`). Variáveis de ambiente (ficheiro `.env`, NÃO está no zip): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. SQL de configuração: `supabase-setup.sql`.
 
 ## 3. Estrutura
 - `src/App.jsx` — rotas: `/` Caixa, `/fiados`, `/produtos` (Stock), `/xitique`, `/despesas`, `/poupanca`, `/perfil`.
 - `src/context/DataContext.jsx` — TODA a lógica de dados e regras (ver secção 4). `AuthContext.jsx` — sessão e perfil.
 - `src/pages/` — Caixa, Fiados, Produtos, Xitique, Despesas, Poupanca, Perfil, Login, Cadastro.
-- `src/components/` — Layout, Header (botão "Relatório"), BottomNav (menu de 6 abas), RelatorioModal, Modal, Campo, Botao, HeroCard, SeletorDia, Icons (inclui `IconeWhatsApp`), Footer, etc.
-- `src/utils/format.js` — formatação, datas, `semEmoji`. `src/utils/whatsapp.js` — `linkWhatsApp(telefone, mensagem)` (wa.me, aceita números de Moçambique, junta 258).
+- `src/components/` — Layout, Header (botão "Relatório"), BottomNav (menu de 6 abas), RelatorioModal, FechoDiaModal, LembretesModal, DossieModal, AlertBanner, Modal, Campo, Botao, HeroCard, SeletorDia, Icons (inclui `IconeWhatsApp`, `IconeFecho`, `IconeSino`), Footer, etc.
+- `src/utils/format.js` — formatação, datas, `semEmoji`. `src/utils/lembretes.js` — tipos de lembrete e cálculo da próxima data de pagamento (`proximaOcorrencia`). `src/utils/dossie.js` — `calcDossie` (números do dossiê de crédito). `src/utils/dossiePdf.js` — `criarDossiePdf` (desenha o PDF com jsPDF, carregado só ao gerar). `src/utils/whatsapp.js` — `linkWhatsApp(telefone, mensagem)` (wa.me, aceita números de Moçambique, junta 258).
 
 ## 4. Regras de negócio importantes
 - Dados guardados em `localStorage` e sincronizados (instantâneo JSON) para `dados_financeiros` no Supabase, um registo por utilizador. Chaves: transacoes, saldo_inicial, participantes, pagamentos, entregas, movimentos_poupanca, fiados, produtos. Metas da poupança e saldos iniciais ficam dentro de `saldo_inicial` (`__metas`, `__global`).
@@ -26,6 +26,11 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; Supabase (aut
 - **Fiados:** cliente, produto/serviço, valor, vencimento, telefone, pagamentos parciais, aumentos de dívida, edição (valor, produto, vencimento, telefone). Recebimentos entram no Caixa na data em que são recebidos. O relatório mostra "Fiados feitos" e "Fiados pagos" (data em que a dívida foi feita e em que foi paga). Botão "Lembrar" abre o WhatsApp com mensagem pronta.
 - **Despesas (passo 4):** grupos Salários (Meu salário; Salário de funcionário com nome da pessoa), Administrativas, Comerciais e Vendas, Tecnologia e Ferramentas, Financeiras, Legais e Regulatórias (definidos em `DESPESA_GRUPOS`). Cada pagamento é uma saída (`registarDespesa`), sai do saldo total e aparece na secção "Salários e Despesas" do relatório. Decisão tomada: registar cada pagamento com o nome (sugestões de nomes já pagos); NÃO há lista de funcionários com salário fixo (pode vir depois).
 - Stock: venda ligada ao produto desconta quantidade e calcula lucro real (custo vs receita).
+- **Alertas, Fecho do dia e Lembretes (passo 13):** `computeAlertas` (DataContext) devolve avisos de fiados vencidos / a vencer hoje / amanhã, stock baixo, lembretes de pagamentos (dentro do prazo de aviso) e "fecho por fazer" (depois das 17h, com registos hoje e sem fecho). O `AlertBanner` do Caixa abre o ecrã certo (fiados, stock, modal de lembretes ou modal do fecho). Os botões "Fecho do dia" e "Lembretes" estão no Caixa, por baixo de "+ Entrada / − Saída".
+  - **Fecho do dia:** resumo de hoje (entradas, saídas, lucro real, saldo total, fiados recebidos), conferência do dinheiro contado vs saldo da app em cada método (dinheiro, M-Pesa, e-Mola, mKesh) com "Certo / Sobram / Faltam", lista de avisos e últimos 5 fechos. Guardado em `saldo_inicial.__fechos[dateKey]` = `{contado, esperado, diferenca, timestamp}`. A diferença NÃO cria movimento no Caixa (só fica registada).
+  - **Lembretes:** tipo (renda, licença/alvará, luz/água/internet, impostos, outro; cada um liga a uma categoria de despesa), nome opcional, valor opcional, recorrência (mensal, anual, uma vez), dia/mês/data e "avisar X dias antes". Guardados em `saldo_inicial.__lembretes`. "Pagar" regista a saída como despesa (setor + método, com as mesmas validações de saldo da aba Despesas) e avança para o próximo período; se o valor ficar vazio só marca como pago. Em lembretes mensais, um mês anterior não pago é esquecido quando o mês vira (só conta o período actual).
+  - Sem alterações no SQL: tudo vai dentro de `saldo_inicial` (JSON) e sincroniza como o resto.
+- **Dossiê para pedir crédito (passo 14):** no Perfil, secção "Crédito e financiamento". O utilizador escolhe 3, 6 ou 12 meses (os últimos N meses, o actual incluído) e o nome do negócio (guardado em `saldo_inicial.__negocio`). Gera um PDF A4 (jsPDF) com: cabeçalho (negócio, responsável, WhatsApp, período), 4 números (vendas, lucro líquido, média mensal de vendas, margem líquida), resultado do período (usa `calcResultado`, regime de caixa), gráfico de barras mês a mês (vendas vs lucro líquido, eixo com valores redondos), tabela por mês, fiados (concedidos, cobrados, por receber, em atraso), stock actual (valor ao custo e à venda, 8 maiores produtos), poupança (guardado, retirado, total) e notas. A média mensal usa só os meses completos com registos (o mês actual conta nos totais). Se o negócio tem menos meses de dados do que o período, o PDF e o ecrã avisam. Botões: "Descarregar PDF" e "Partilhar" (Web Share, só onde o aparelho suporta). Sem alterações no SQL.
 
 ## 5. Regras de estilo pedidas pelo dono do projecto
 - Sem emojis na app, excepto no rodapé. Sem "Ex:" nos placeholders. Ícones em SVG. O botão do cabeçalho mostra o ícone + a palavra "Relatório".
@@ -34,19 +39,21 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; Supabase (aut
 
 ## 6. Estado dos passos
 FEITOS: passo 3 (fiados editáveis, relatório de fiados, WhatsApp, poupança ligada ao saldo, remoção de emojis/porcos, relatório); passo 4 (aba Despesas + relatório); passo 5 (redesign da Poupança com anéis de progresso, ícone de moedas no menu, `semEmoji`); passo 6 (lembrete WhatsApp com `utils/whatsapp.js`, "Como usar a aplicação" no Perfil, Termos e condições revistos, 12 pontos).
-Passo 7: tema azul claro restaurado (`--bg #EEF4FC`, classe `.cartao-azul` em `index.css`), exemplos dos placeholders limpos (excepto 'Comprar um Terreno'). Passo 9: o método Dinheiro usa a imagem da moeda de 10 MT (`public/metodos/dinheiro.png`, recorte circular). Passo 8: logos de M-Pesa, e-Mola e mKesh (`public/metodos/*.png`, componentes `MetodoLogo` e `SeletorMetodo`) nos cartões do Caixa, na lista de movimentos e nos seletores de método de pagamento.
+Passo 7: tema azul claro restaurado (`--bg #EEF4FC`, classe `.cartao-azul` em `index.css`), exemplos dos placeholders limpos (excepto 'Comprar um Terreno'). Passo 12: Relatório com secção 'Lucro Líquido' (lucro = vendas sem trocos - custo da mercadoria - salários - despesas - outras saídas; Poupança e Xitique ficam de fora; compara com o período anterior) e 'Ponto de equilíbrio' no mensal (custos / margem das vendas ligadas ao stock; mostra quanto falta e quanto por dia). Lógica em `src/utils/resultado.js`. Passo 9: o método Dinheiro usa a imagem da moeda de 10 MT (`public/metodos/dinheiro.png`, recorte circular). Passo 8: logos de M-Pesa, e-Mola e mKesh (`public/metodos/*.png`, componentes `MetodoLogo` e `SeletorMetodo`) nos cartões do Caixa, na lista de movimentos e nos seletores de método de pagamento.
+Passo 13 (alertas e fecho do dia): ver secção 4 (alertas, Fecho do dia com conferência por método, Lembretes de renda/licenças). Compilado com `npm run build` sem erros; a lógica das datas dos lembretes foi testada, mas o fluxo no telemóvel ainda não foi testado à mão.
+Passo 14 (dossiê para pedir crédito): ver secção 4. Compilado com `npm run build`; o PDF foi gerado e conferido visualmente com dados de teste (3, 6 e 12 meses), mas ainda não foi testado no telemóvel real (descarregar e partilhar).
 Este zip já tem TODOS estes passos aplicados.
 
 ## 7. Pontos em aberto / a verificar
-1. **Nada foi compilado ainda** nas últimas sessões (sem acesso à rede). Primeiro passo: `npm install` e `npm run dev`, corrigir erros se houver.
+1. `npm install` e `npm run build` já foram feitos com sucesso (outubro 2026, antes e depois do passo 13). Falta testar à mão no telemóvel: fecho do dia, criar/pagar lembretes, avisos no Caixa, e gerar/partilhar o dossiê em PDF.
 2. O rodapé (`Footer.jsx`) está vazio e o dono decidiu deixá-lo assim.
 3. Termos e condições são texto genérico; um jurista deve rever os pontos 8 (salários) e 10 (responsabilidade).
 4. O SQL de `supabase-setup.sql` não precisa de alterações para as despesas (usam `transacoes`).
 
 ## 8. Roadmap de ideias (para tornar a app indispensável), por prioridade
-1. **Lucro líquido e ponto de equilíbrio** (vendas - custo da mercadoria - salários - despesas; comparação com o mês anterior; quanto vender por dia para não ter prejuízo). Usa dados que já existem. SUGERIDO COMO PRÓXIMO PASSO.
-2. **Alertas e resumo diário / fecho do dia** (stock baixo, fiados a vencer, renda e licenças; conferência do dinheiro contado vs saldo).
-3. **Dossiê para pedir crédito** (PDF com 6-12 meses de vendas, lucro, despesas, fiados cobrados).
+1. ~~Lucro líquido e ponto de equilíbrio~~ FEITO no Relatório (passo 12). Possível evolução: cartão de lucro do mês no ecrã do Caixa, gráficos e produtos mais lucrativos.
+2. ~~Alertas e resumo diário / fecho do dia~~ FEITO (passo 13). Possíveis evoluções: registar a diferença do fecho como ajuste no Caixa, aviso do fecho por notificação/WhatsApp, avisos de lembretes em atraso de meses anteriores.
+3. ~~Dossiê para pedir crédito~~ FEITO (passo 14). Possíveis evoluções: assinatura/carimbo do dono, comparação com o mesmo período do ano anterior, anexar lista de clientes com fiado pago a tempo.
 4. Recibos e comprovativos de salário em PDF/imagem para enviar por WhatsApp.
 5. Funcionários com acesso limitado (registar vendas sem ver lucros/poupança) — exige perfis e permissões.
 6. Extras: registar vendas M-Pesa/e-Mola colando o SMS; ficha e limite de fiado por cliente; produtos mais lucrativos e sugestor de preço; metas do negócio; vários negócios na mesma conta; dicas curtas de gestão; lista de funcionários com salário fixo.

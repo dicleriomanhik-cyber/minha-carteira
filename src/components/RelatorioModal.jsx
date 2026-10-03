@@ -3,7 +3,8 @@ import Modal from './Modal';
 import PillButton from './PillButton';
 import { useData } from '../context/DataContext';
 import { CAT_LOOKUP, DESPESA_GRUPOS, DESPESA_IDS } from '../context/DataContext';
-import { semEmoji, formatMoney, formatDataCurta, formatDataLonga, periodoLabel, dateKey } from '../utils/format';
+import { calcResultado, calcEquilibrio } from '../utils/resultado';
+import { HOJE_KEY, semEmoji, formatMoney, formatDataCurta, formatDataLonga, periodoLabel, dateKey } from '../utils/format';
 
 const MESES_LONGO = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -142,6 +143,16 @@ export default function RelatorioModal({ aberto, aoFechar }) {
     })).filter((g) => g.total > 0);
     const totalDespesas = despTxs.reduce((s, t) => s + t.valor, 0);
 
+    const res = calcResultado(txs);
+    const resAnt = periodo === 'tudo' ? null : calcResultado(transacoes.filter((t) => dentroPeriodo(t.dateKey, periodo, desloc + 1)));
+    const equilibrio = periodo === 'mes' ? calcEquilibrio(res) : null;
+    let diasMes = 0; let diasRestantes = 0;
+    if (periodo === 'mes') {
+      const [, fim] = intervalo('mes', desloc);
+      diasMes = Number(fim.slice(8, 10));
+      diasRestantes = desloc === 0 ? Math.max(1, diasMes - Number(HOJE_KEY.slice(8, 10)) + 1) : 0;
+    }
+
     const porDiaMap = new Map();
     txs.forEach((t) => {
       const atual = porDiaMap.get(t.dateKey) || { dateKey: t.dateKey, entradas: 0, saidas: 0 };
@@ -164,7 +175,7 @@ export default function RelatorioModal({ aberto, aoFechar }) {
     return {
       totalEntradas, totalSaidas, totalProdutos, totalMaquina, pagXitique, entXitique, guardadoPoupanca, retiradoPoupanca,
       recebidoFiados, emAbertoFiados, movsPoupanca, fiadosFeitos, fiadosPagos, totalFiadosFeitos, totalFiadosPagos, receitaStock, custoStock, porDia,
-      saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal, despTxs, despPorGrupo, totalDespesas,
+      saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal, despTxs, despPorGrupo, totalDespesas, res, resAnt, equilibrio, diasMes, diasRestantes,
     };
   }, [periodo, desloc, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado, metas]);
 
@@ -182,6 +193,81 @@ export default function RelatorioModal({ aberto, aoFechar }) {
         <p className="flex-1 text-center text-xs font-medium capitalize text-[var(--ink-soft)]">{rotuloPeriodo(periodo, desloc)}</p>
         <button type="button" aria-label="Período seguinte" disabled={periodo === 'tudo' || desloc === 0} onClick={() => setDesloc((d) => Math.max(0, d - 1))} className="rounded-full px-3 py-1 text-lg text-[var(--ink)] disabled:opacity-30">›</button>
       </div>
+
+      <Seccao titulo="Lucro Líquido">
+        {!dados.res.temDados ? (
+          <p className="py-2 text-sm text-[var(--ink-soft)]">Sem movimentos neste período.</p>
+        ) : (
+          <>
+            <div className="mb-2 rounded-2xl p-3.5" style={{ background: dados.res.lucroLiquido >= 0 ? 'var(--teal-soft)' : 'var(--brick-soft)' }}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: dados.res.lucroLiquido >= 0 ? 'var(--teal)' : 'var(--brick)' }}>
+                {dados.res.lucroLiquido >= 0 ? 'Lucro do período' : 'Prejuízo do período'}
+              </p>
+              <p className="font-display mt-0.5 text-2xl font-bold" style={{ color: dados.res.lucroLiquido >= 0 ? 'var(--teal)' : 'var(--brick)' }}>
+                {formatMoney(dados.res.lucroLiquido)} <span className="text-sm">MT</span>
+              </p>
+              {dados.resAnt && dados.resAnt.temDados && (() => {
+                const dif = Math.round((dados.res.lucroLiquido - dados.resAnt.lucroLiquido) * 100) / 100;
+                const ref = periodo === 'dia' ? 'ao dia anterior' : periodo === 'semana' ? 'à semana anterior' : 'ao mês anterior';
+                return (
+                  <p className="mt-1 text-xs text-[var(--ink-soft)]">
+                    {dif === 0 ? `Igual ${ref}.` : `${dif > 0 ? 'Mais' : 'Menos'} ${formatMoney(Math.abs(dif))} MT em relação ${ref}.`}
+                  </p>
+                );
+              })()}
+            </div>
+            <Linha label="Vendas e serviços (sem trocos)" valor={dados.res.receita} />
+            <Linha label="Custo da mercadoria vendida" valor={dados.res.custoMercadoria} />
+            <Linha label="Lucro bruto" valor={dados.res.lucroBruto} />
+            <Linha label="Salários" valor={dados.res.salarios} />
+            <Linha label="Despesas operacionais" valor={dados.res.despesas} />
+            <Linha label="Outras saídas" valor={dados.res.outras} />
+            <Linha label="Lucro líquido" valor={dados.res.lucroLiquido} />
+            <p className="pt-1 text-[11px] leading-relaxed text-[var(--ink-soft)]">
+              Conta o dinheiro que entrou e saiu. A Poupança e o Xitique ficam de fora. O custo da mercadoria só é conhecido nas vendas ligadas ao Stock.
+            </p>
+          </>
+        )}
+      </Seccao>
+
+      {periodo === 'mes' && dados.equilibrio && (
+        <Seccao titulo="Ponto de equilíbrio">
+          {dados.equilibrio.estado === 'sem_custos' && (
+            <p className="py-2 text-sm text-[var(--ink-soft)]">Regista os salários e as despesas do mês na aba Despesas para ver quanto precisas de vender para não ter prejuízo.</p>
+          )}
+          {dados.equilibrio.estado === 'sem_margem' && (
+            <p className="py-2 text-sm text-[var(--ink-soft)]">Para calcular, faz vendas ligadas a produtos do Stock com preço de custo. Assim a app sabe quanto ganhas em cada venda.</p>
+          )}
+          {dados.equilibrio.estado === 'ok' && (() => {
+            const pe = dados.equilibrio.pe;
+            const vendido = dados.res.receita;
+            const pc = Math.max(0, Math.min(100, (vendido / pe) * 100));
+            const faltam = Math.max(0, pe - vendido);
+            const passou = vendido >= pe;
+            return (
+              <div className="py-2 text-sm">
+                <p className="text-[var(--ink)]">
+                  Para cobrir os custos do mês precisas de vender <b className="font-mono-ref">{formatMoney(pe)} MT</b>
+                  <span className="text-[var(--ink-soft)]"> (ganhas cerca de {Math.round(dados.equilibrio.margem * 100)}% em cada venda).</span>
+                </p>
+                <div className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-[var(--bg-soft)]">
+                  <div className="h-full rounded-full transition-all" style={{ width: pc + '%', background: passou ? 'var(--teal)' : 'var(--mango)' }} />
+                </div>
+                <p className="mt-1.5 text-xs text-[var(--ink-soft)]">Já vendeste {formatMoney(vendido)} MT ({Math.round(pc)}%).</p>
+                {passou ? (
+                  <p className="mt-2 font-semibold text-[var(--teal)]">Já passaste o ponto de equilíbrio. O que vender agora, depois de tirar o custo, é lucro.</p>
+                ) : desloc === 0 ? (
+                  <p className="mt-2 text-[var(--ink)]">
+                    Faltam <b className="font-mono-ref">{formatMoney(faltam)} MT</b>: cerca de <b className="font-mono-ref">{formatMoney(faltam / dados.diasRestantes)} MT por dia</b> nos {dados.diasRestantes} dias que restam.
+                  </p>
+                ) : (
+                  <p className="mt-2 font-semibold text-[var(--brick)]">Nesse mês não chegaste ao ponto de equilíbrio. Faltaram {formatMoney(faltam)} MT.</p>
+                )}
+              </div>
+            );
+          })()}
+        </Seccao>
+      )}
 
       <Seccao titulo="Caixa do Dia">
         <Linha label="Entradas" valor={dados.totalEntradas} />

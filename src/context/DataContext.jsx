@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { HOJE_KEY, amanhaKey, novoId, mesAtualLabel, timestampParaDia, dateKey } from '../utils/format';
+import { HOJE_KEY, amanhaKey, novoId, mesAtualLabel, timestampParaDia, dateKey, formatMoney } from '../utils/format';
+import { proximaOcorrencia, textoPrazo, TIPOS_LEMBRETE } from '../utils/lembretes';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -551,16 +552,52 @@ export function DataProvider({ children }) {
     }));
   }, [setProdutos]);
 
+  /* ---------- Fecho do dia ---------- */
+  // Guardado dentro de saldo_inicial (__fechos), por isso sincroniza sem alterar o SQL.
+  const fechos = useMemo(() => saldoInicialMap.__fechos || {}, [saldoInicialMap]);
+  const salvarFecho = useCallback((dk, { contado, esperado, diferenca }) => {
+    setSaldoInicialMap((m) => ({ ...m, __fechos: { ...(m.__fechos || {}), [dk]: { contado, esperado, diferenca, timestamp: Date.now() } } }));
+  }, [setSaldoInicialMap]);
+
+  /* ---------- Nome do negócio (usado no Dossiê para crédito) ---------- */
+  const negocio = saldoInicialMap.__negocio || '';
+  const setNegocio = useCallback((nome) => {
+    setSaldoInicialMap((m) => ({ ...m, __negocio: nome }));
+  }, [setSaldoInicialMap]);
+
+  /* ---------- Lembretes de pagamentos (renda, licenças, ...) ---------- */
+  const lembretes = useMemo(() => saldoInicialMap.__lembretes || [], [saldoInicialMap]);
+  const addLembrete = useCallback((dados) => {
+    setSaldoInicialMap((m) => ({ ...m, __lembretes: [...(m.__lembretes || []), { id: novoId(), ...dados }] }));
+  }, [setSaldoInicialMap]);
+  const deleteLembrete = useCallback((id) => {
+    setSaldoInicialMap((m) => ({ ...m, __lembretes: (m.__lembretes || []).filter((x) => x.id !== id) }));
+  }, [setSaldoInicialMap]);
+  const marcarLembretePago = useCallback((id, periodo) => {
+    setSaldoInicialMap((m) => ({
+      ...m,
+      __lembretes: (m.__lembretes || []).map((l) => {
+        if (l.id !== id) return l;
+        return l.recorrencia === 'unico' ? { ...l, pagoEm: HOJE_KEY } : { ...l, ultimoPeriodo: periodo };
+      }),
+    }));
+  }, [setSaldoInicialMap]);
+
   /* ---------- Alertas ---------- */
   const computeAlertas = useCallback(() => {
     const alertas = [];
     const amanha = amanhaKey();
     const ativos = fiados.filter((f) => saldoFiado(f) > 0);
     const vencidos = ativos.filter((f) => f.vencimento && f.vencimento < HOJE_KEY);
+    const venceHoje = ativos.filter((f) => f.vencimento === HOJE_KEY);
     const venceAmanha = ativos.filter((f) => f.vencimento === amanha);
     if (vencidos.length) {
       const total = vencidos.reduce((s, f) => s + saldoFiado(f), 0);
       alertas.push({ tipo: 'fiado', total, count: vencidos.length, texto: `${vencidos.length} fiado(s) vencido(s) — ${total.toFixed(2)} MT por receber. Toca para ver.` });
+    }
+    if (venceHoje.length) {
+      const total = venceHoje.reduce((s, f) => s + saldoFiado(f), 0);
+      alertas.push({ tipo: 'fiado', total, count: venceHoje.length, texto: `${venceHoje.length} fiado(s) vence(m) hoje — ${total.toFixed(2)} MT. Toca para ver.` });
     }
     if (venceAmanha.length) {
       const total = venceAmanha.reduce((s, f) => s + saldoFiado(f), 0);
@@ -571,8 +608,20 @@ export function DataProvider({ children }) {
       const nomes = baixos.slice(0, 3).map((p) => p.nome).join(', ');
       alertas.push({ tipo: 'stock', texto: `Stock baixo: ${nomes}${baixos.length > 3 ? '…' : ''}. Toca para repor.` });
     }
+    lembretes.forEach((l) => {
+      const o = proximaOcorrencia(l);
+      if (!o) return;
+      if (o.dias > (l.avisarDias ?? 3)) return;
+      const nome = l.nome || (TIPOS_LEMBRETE.find((t) => t.id === l.tipo) || {}).label || 'Pagamento';
+      const valor = l.valor > 0 ? ` — ${formatMoney(l.valor)} MT` : '';
+      alertas.push({ tipo: 'lembrete', texto: `${nome}: ${textoPrazo(o.dias)}${valor}. Toca para ver.` });
+    });
+    const agora = new Date();
+    if (agora.getHours() >= 17 && transacoes.some((t) => t.dateKey === HOJE_KEY) && !fechos[HOJE_KEY]) {
+      alertas.push({ tipo: 'fecho', texto: 'Ainda não fizeste o fecho de hoje. Toca para conferir o dinheiro.' });
+    }
     return alertas;
-  }, [fiados, produtos, saldoFiado]);
+  }, [fiados, produtos, saldoFiado, lembretes, transacoes, fechos]);
 
   /* ---------- Backup ---------- */
   const exportarBackup = useCallback(() => {
@@ -611,6 +660,7 @@ export function DataProvider({ children }) {
     metas, addMeta, deleteMeta, saldoPorMetodo,
     saldoFiado, statusFiado, nomesClientesFiado, salvarFiado, aumentarFiado, editarFiado, registarRecebimentoFiado, deleteFiado,
     salvarProduto, deleteProduto, reporProduto,
+    negocio, setNegocio, fechos, salvarFecho, lembretes, addLembrete, deleteLembrete, marcarLembretePago,
     computeAlertas, exportarBackup, importarBackup,
   };
 
