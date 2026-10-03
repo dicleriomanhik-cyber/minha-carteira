@@ -34,12 +34,12 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; Supabase (aut
 
 ## 6. Estado dos passos
 FEITOS: passo 3 (fiados editáveis, relatório de fiados, WhatsApp, poupança ligada ao saldo, remoção de emojis/porcos, relatório); passo 4 (aba Despesas + relatório); passo 5 (redesign da Poupança com anéis de progresso, ícone de moedas no menu, `semEmoji`); passo 6 (lembrete WhatsApp com `utils/whatsapp.js`, "Como usar a aplicação" no Perfil, Termos e condições revistos, 12 pontos).
-Passo 7: tema azul claro restaurado (`--bg #EEF4FC`, classe `.cartao-azul` em `index.css`), exemplos dos placeholders limpos (excepto 'Comprar um Terreno'). Passo 8: logos de M-Pesa, e-Mola e mKesh (`public/metodos/*.png`, componentes `MetodoLogo` e `SeletorMetodo`) nos cartões do Caixa, na lista de movimentos e nos seletores de método de pagamento.
+Passo 7: tema azul claro restaurado (`--bg #EEF4FC`, classe `.cartao-azul` em `index.css`), exemplos dos placeholders limpos (excepto 'Comprar um Terreno'). Passo 9: o método Dinheiro usa a imagem da nota de 1000 MT (`public/metodos/dinheiro.jpg`). Passo 8: logos de M-Pesa, e-Mola e mKesh (`public/metodos/*.png`, componentes `MetodoLogo` e `SeletorMetodo`) nos cartões do Caixa, na lista de movimentos e nos seletores de método de pagamento.
 Este zip já tem TODOS estes passos aplicados.
 
 ## 7. Pontos em aberto / a verificar
 1. **Nada foi compilado ainda** nas últimas sessões (sem acesso à rede). Primeiro passo: `npm install` e `npm run dev`, corrigir erros se houver.
-2. **O rodapé (`Footer.jsx`) está vazio.** O dono pediu para manter os emojis do rodapé; perguntar-lhe qual era o texto/emojis e repor.
+2. O rodapé (`Footer.jsx`) está vazio e o dono decidiu deixá-lo assim.
 3. Termos e condições são texto genérico; um jurista deve rever os pontos 8 (salários) e 10 (responsabilidade).
 4. O SQL de `supabase-setup.sql` não precisa de alterações para as despesas (usam `transacoes`).
 
