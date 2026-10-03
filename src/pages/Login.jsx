@@ -42,7 +42,7 @@ export default function Login({ aoIrParaCadastro }) {
 
         <form onSubmit={aoSubmeter} className="space-y-3.5">
           <Campo label="Email">
-            <input className="campo" type="email" placeholder="teuemail@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            <input className="campo" type="email" placeholder="" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
           </Campo>
           <Campo label="Senha">
             <input className="campo" type="password" placeholder="A tua senha" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="current-password" />

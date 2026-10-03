@@ -69,10 +69,10 @@ export default function Cadastro({ aoIrParaLogin }) {
             <input className="campo" placeholder="O teu nome" value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" />
           </Campo>
           <Campo label="Número de WhatsApp">
-            <input className="campo" type="tel" placeholder="+258 84..." value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} autoComplete="tel" />
+            <input className="campo" type="tel" placeholder="" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} autoComplete="tel" />
           </Campo>
           <Campo label="Email">
-            <input className="campo" type="email" placeholder="teuemail@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            <input className="campo" type="email" placeholder="" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
           </Campo>
           <Campo label="Senha">
             <input className="campo" type="password" placeholder="Pelo menos 6 caracteres" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="new-password" />

@@ -2,8 +2,8 @@
 
 :root {
   /* Cor — paleta "caderno escolar" em azul claro (mesmo modelo do Sala Virtual) */
-  --bg: #F3F4F6;
-  --bg-soft: #E9EBEF;
+  --bg: #EEF4FC;
+  --bg-soft: #E1EAF7;
   --paper: #FFFFFF;
   --paper-soft: #F4F8FE;
   --ink: #16202E;
@@ -12,7 +12,7 @@
   --cream-soft: #5B6472;
   --mango: #1A73E8;
   --mango-ink: #FFFFFF;
-  --mango-soft: #E8F0FE;
+  --mango-soft: #DCE9FF;
   --teal: #1F7A6C;
   --teal-soft: #E4F2EE;
   --brick: #B5482F;
@@ -30,6 +30,11 @@ body {
   color: var(--cream);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+
+.cartao-azul {
+  background: linear-gradient(135deg, #0C275F 0%, #0F3886 55%, #1349AB 100%);
+  box-shadow: 0 6px 18px rgba(12, 39, 95, 0.18);
 }
 
 .font-display {

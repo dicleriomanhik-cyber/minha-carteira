@@ -313,14 +313,14 @@ export default function Fiados() {
       <Modal titulo="+ Fiado" aberto={modalAberto} aoFechar={() => setModalAberto(false)} tamanho="larga">
         <div className="space-y-4">
           <Campo label="Nome do Cliente">
-            <input className="campo" list="clientes-fiado" maxLength={30} placeholder="Dona Berta" value={campos.cliente} onChange={(e) => setCampos((c) => ({ ...c, cliente: e.target.value }))} />
+            <input className="campo" list="clientes-fiado" maxLength={30} placeholder="" value={campos.cliente} onChange={(e) => setCampos((c) => ({ ...c, cliente: e.target.value }))} />
             <datalist id="clientes-fiado">
               {nomesClientesFiado.map((n) => <option key={n} value={n} />)}
             </datalist>
           </Campo>
 
           <Campo label="WhatsApp do cliente (opcional)">
-            <input className="campo" type="tel" inputMode="tel" placeholder="84 123 4567" value={campos.telefone} onChange={(e) => setCampos((c) => ({ ...c, telefone: e.target.value }))} />
+            <input className="campo" type="tel" inputMode="tel" placeholder="" value={campos.telefone} onChange={(e) => setCampos((c) => ({ ...c, telefone: e.target.value }))} />
           </Campo>
 
           <Campo label="Produto do stock (opcional)">
@@ -337,7 +337,7 @@ export default function Fiados() {
           )}
 
           <Campo label="Produto ou serviço">
-            <input className="campo" maxLength={60} placeholder="3 latas de leite" value={campos.produtoDescricao} onChange={(e) => setCampos((c) => ({ ...c, produtoDescricao: e.target.value }))} />
+            <input className="campo" maxLength={60} placeholder="" value={campos.produtoDescricao} onChange={(e) => setCampos((c) => ({ ...c, produtoDescricao: e.target.value }))} />
           </Campo>
 
           <Campo label="Valor Total (MT)">
@@ -412,7 +412,7 @@ export default function Fiados() {
             )}
 
             <Campo label="Produto ou serviço">
-              <input className="campo" maxLength={60} placeholder="2 sacos de arroz" value={aum.descricao} onChange={(e) => setAum((c) => ({ ...c, descricao: e.target.value }))} />
+              <input className="campo" maxLength={60} placeholder="" value={aum.descricao} onChange={(e) => setAum((c) => ({ ...c, descricao: e.target.value }))} />
             </Campo>
 
             <Campo label="Valor a acrescentar (MT)">
@@ -449,7 +449,7 @@ export default function Fiados() {
               <input className="campo" type="date" value={ed.vencimento} onChange={(e) => setEd((c) => ({ ...c, vencimento: e.target.value }))} />
             </Campo>
             <Campo label="WhatsApp do cliente (opcional)">
-              <input className="campo" type="tel" inputMode="tel" placeholder="84 123 4567" value={ed.telefone} onChange={(e) => setEd((c) => ({ ...c, telefone: e.target.value }))} />
+              <input className="campo" type="tel" inputMode="tel" placeholder="" value={ed.telefone} onChange={(e) => setEd((c) => ({ ...c, telefone: e.target.value }))} />
             </Campo>
             <div className="flex gap-2 pt-1">
               <Botao variante="secundario" onClick={() => setEditarId(null)}>Cancelar</Botao>

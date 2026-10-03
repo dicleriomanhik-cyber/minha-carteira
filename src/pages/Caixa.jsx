@@ -284,7 +284,7 @@ export default function Caixa() {
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />
           </Campo>
           <Campo label="Nota (opcional)">
-            <input className="campo" type="text" maxLength={40} placeholder="Cliente da esquina" value={nota} onChange={(e) => setNota(e.target.value)} />
+            <input className="campo" type="text" maxLength={40} placeholder="" value={nota} onChange={(e) => setNota(e.target.value)} />
           </Campo>
 
           <div className="flex gap-2 pt-1">

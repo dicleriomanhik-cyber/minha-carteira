@@ -194,13 +194,13 @@ export default function Xitique() {
       <Modal titulo={editandoId ? 'Editar Participante' : 'Novo Participante'} aberto={modalParticipante} aoFechar={() => setModalParticipante(false)}>
         <div className="space-y-4">
           <Campo label="Nome">
-            <input className="campo" maxLength={30} placeholder="Dona Amélia" value={nome} onChange={(e) => setNome(e.target.value)} />
+            <input className="campo" maxLength={30} placeholder="" value={nome} onChange={(e) => setNome(e.target.value)} />
           </Campo>
           <Campo label="Valor Combinado (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorCombinado} onChange={(e) => setValorCombinado(e.target.value)} />
           </Campo>
           <Campo label="WhatsApp (opcional)">
-            <input className="campo" type="tel" inputMode="tel" placeholder="84 123 4567" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+            <input className="campo" type="tel" inputMode="tel" placeholder="" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
           </Campo>
           <div className="flex gap-2 pt-1">
             {editandoId && <Botao variante="perigo" onClick={apagarAtual}>Apagar</Botao>}

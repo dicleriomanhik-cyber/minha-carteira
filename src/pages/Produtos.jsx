@@ -177,7 +177,7 @@ export default function Produtos() {
       <Modal titulo={editandoId ? 'Editar Produto' : '+ Produto'} aberto={modalAberto} aoFechar={() => setModalAberto(false)}>
         <div className="space-y-4">
           <Campo label="Nome do Produto">
-            <input className="campo" maxLength={40} placeholder="Açúcar (saco 50kg)" value={campos.nome} onChange={(e) => setCampos((c) => ({ ...c, nome: e.target.value }))} />
+            <input className="campo" maxLength={40} placeholder="" value={campos.nome} onChange={(e) => setCampos((c) => ({ ...c, nome: e.target.value }))} />
           </Campo>
           <Campo label="Quantidade em Stock">
             <input className="campo" type="number" min="0" step="1" placeholder="0" value={campos.quantidade} onChange={(e) => setCampos((c) => ({ ...c, quantidade: e.target.value }))} />
@@ -208,7 +208,7 @@ export default function Produtos() {
             );
           })()}
           <Campo label="Alertar quando o stock chegar a">
-            <input className="campo" type="number" min="0" step="1" placeholder="3" value={campos.alertaEm} onChange={(e) => setCampos((c) => ({ ...c, alertaEm: e.target.value }))} />
+            <input className="campo" type="number" min="0" step="1" placeholder="" value={campos.alertaEm} onChange={(e) => setCampos((c) => ({ ...c, alertaEm: e.target.value }))} />
           </Campo>
           <div className="flex gap-2 pt-1">
             {editandoId && <Botao variante="perigo" onClick={apagarAtual}>Apagar</Botao>}
@@ -224,7 +224,7 @@ export default function Produtos() {
           <div className="space-y-4">
             <p className="text-sm text-[var(--ink-soft)]">Em stock: {modalVender.quantidade} · Preço {formatMoney(modalVender.precoVenda)} MT por unidade</p>
             <Campo label="Quantidade">
-              <input className="campo" type="number" min="1" step="1" placeholder="1" value={vQtd} onChange={(e) => setVQtd(e.target.value)} />
+              <input className="campo" type="number" min="1" step="1" placeholder="" value={vQtd} onChange={(e) => setVQtd(e.target.value)} />
             </Campo>
             <p className="-mt-2 text-sm font-semibold text-[var(--ink)]">Total: {formatMoney((parseInt(vQtd) || 0) * modalVender.precoVenda)} MT</p>
             <Campo label="Como pagou?">
@@ -243,10 +243,10 @@ export default function Produtos() {
             {vModo === 'fiado' && (
               <>
                 <Campo label="Nome do cliente">
-                  <input className="campo" maxLength={30} placeholder="Dona Berta" value={vCliente} onChange={(e) => setVCliente(e.target.value)} />
+                  <input className="campo" maxLength={30} placeholder="" value={vCliente} onChange={(e) => setVCliente(e.target.value)} />
                 </Campo>
                 <Campo label="WhatsApp do cliente (opcional)">
-                  <input className="campo" type="tel" inputMode="tel" placeholder="84 123 4567" value={vTelefone} onChange={(e) => setVTelefone(e.target.value)} />
+                  <input className="campo" type="tel" inputMode="tel" placeholder="" value={vTelefone} onChange={(e) => setVTelefone(e.target.value)} />
                 </Campo>
                 <Campo label="Pagar até">
                   <input className="campo" type="date" value={vVenc} onChange={(e) => setVVenc(e.target.value)} />

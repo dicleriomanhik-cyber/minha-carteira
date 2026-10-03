@@ -158,7 +158,7 @@ export default function Despesas() {
             </select>
           </Campo>
           <Campo label="Nota (opcional)">
-            <input className="campo" maxLength={40} placeholder="Mês de Outubro" value={nota} onChange={(e) => setNota(e.target.value)} />
+            <input className="campo" maxLength={40} placeholder="" value={nota} onChange={(e) => setNota(e.target.value)} />
           </Campo>
           <div className="flex gap-2 pt-1">
             <Botao variante="secundario" onClick={() => setAberto(false)}>Cancelar</Botao>

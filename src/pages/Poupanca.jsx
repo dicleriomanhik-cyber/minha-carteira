@@ -271,7 +271,7 @@ export default function Poupanca() {
             </select>
           </Campo>
           <Campo label="Nota (opcional)">
-            <input className="campo" maxLength={40} placeholder="Poupança do mês" value={notaGuardar} onChange={(e) => setNotaGuardar(e.target.value)} />
+            <input className="campo" maxLength={40} placeholder="" value={notaGuardar} onChange={(e) => setNotaGuardar(e.target.value)} />
           </Campo>
           <div className="flex gap-2 pt-1">
             <Botao variante="secundario" onClick={() => setModalGuardar(false)}>Cancelar</Botao>
@@ -297,7 +297,7 @@ export default function Poupanca() {
             </select>
           </Campo>
           <Campo label="Motivo">
-            <input className="campo" maxLength={40} placeholder="Comprei sapatos" value={notaRetirar} onChange={(e) => setNotaRetirar(e.target.value)} />
+            <input className="campo" maxLength={40} placeholder="" value={notaRetirar} onChange={(e) => setNotaRetirar(e.target.value)} />
           </Campo>
           <div className="flex gap-2 pt-1">
             <Botao variante="secundario" onClick={() => setModalRetirar(false)}>Cancelar</Botao>
