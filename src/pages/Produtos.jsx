@@ -152,10 +152,10 @@ export default function Produtos() {
             return (
               <Linha
                 key={p.id}
-                avatar="🧺"
+                avatar={(p.nome || '?').trim()[0]?.toUpperCase()}
                 aoTocarMeio={() => abrirEditar(p)}
                 titulo={p.nome}
-                subtitulo={`${baixo ? '⚠️ ' : ''}Stock: ${p.quantidade} · Custo ${formatMoney(p.precoCusto)} · Venda ${formatMoney(p.precoVenda)} MT`}
+                subtitulo={`Stock: ${p.quantidade} · Custo ${formatMoney(p.precoCusto)} · Venda ${formatMoney(p.precoVenda)} MT`}
                 badge={baixo ? <span className="rounded-full bg-[var(--brick-soft)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--brick)]">Baixo</span> : null}
                 acao={
                   <span className="flex shrink-0 items-center gap-1.5">
@@ -177,7 +177,7 @@ export default function Produtos() {
       <Modal titulo={editandoId ? 'Editar Produto' : '+ Produto'} aberto={modalAberto} aoFechar={() => setModalAberto(false)}>
         <div className="space-y-4">
           <Campo label="Nome do Produto">
-            <input className="campo" maxLength={40} placeholder="Ex: Açúcar (saco 50kg)" value={campos.nome} onChange={(e) => setCampos((c) => ({ ...c, nome: e.target.value }))} />
+            <input className="campo" maxLength={40} placeholder="Açúcar (saco 50kg)" value={campos.nome} onChange={(e) => setCampos((c) => ({ ...c, nome: e.target.value }))} />
           </Campo>
           <Campo label="Quantidade em Stock">
             <input className="campo" type="number" min="0" step="1" placeholder="0" value={campos.quantidade} onChange={(e) => setCampos((c) => ({ ...c, quantidade: e.target.value }))} />
@@ -243,10 +243,10 @@ export default function Produtos() {
             {vModo === 'fiado' && (
               <>
                 <Campo label="Nome do cliente">
-                  <input className="campo" maxLength={30} placeholder="Ex: Dona Berta" value={vCliente} onChange={(e) => setVCliente(e.target.value)} />
+                  <input className="campo" maxLength={30} placeholder="Dona Berta" value={vCliente} onChange={(e) => setVCliente(e.target.value)} />
                 </Campo>
                 <Campo label="WhatsApp do cliente (opcional)">
-                  <input className="campo" type="tel" inputMode="tel" placeholder="Ex: 84 123 4567" value={vTelefone} onChange={(e) => setVTelefone(e.target.value)} />
+                  <input className="campo" type="tel" inputMode="tel" placeholder="84 123 4567" value={vTelefone} onChange={(e) => setVTelefone(e.target.value)} />
                 </Campo>
                 <Campo label="Pagar até">
                   <input className="campo" type="date" value={vVenc} onChange={(e) => setVVenc(e.target.value)} />

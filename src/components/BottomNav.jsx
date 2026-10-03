@@ -46,12 +46,24 @@ const ITENS = [
     ),
   },
   {
+    to: '/despesas',
+    label: 'Despesas',
+    icone: (ativo) => (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill={ativo ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+        <circle cx="12" cy="12" r="2.5" />
+        <path d="M6.5 9.5v.01M17.5 14.5v.01" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     to: '/poupanca',
     label: 'Poupança',
     icone: (ativo) => (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill={ativo ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-        <path d="M4 12.5c0-3.6 3.1-6.5 7.4-6.5 3.6 0 6.1 1.6 7.1 3.5H20a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1.2l-.9 2.2a1 1 0 0 1-.93.8H15v1.5a1 1 0 0 1-1 1h-1.2a1 1 0 0 1-1-.86l-.13-1a8 8 0 0 1-2.2-.4L8 18.5a1 1 0 0 1-.86.5H6a1 1 0 0 1-1-1v-1.8C4.4 15.4 4 14 4 12.5Z" strokeLinejoin="round" strokeLinecap="round" />
-        <circle cx="16.5" cy="9.7" r="0.6" fill="currentColor" stroke="none" />
+        <ellipse cx="12" cy="6.5" rx="6.5" ry="2.8" />
+        <path d="M5.5 6.5v5c0 1.5 2.9 2.8 6.5 2.8s6.5-1.3 6.5-2.8v-5" strokeLinejoin="round" />
+        <path d="M5.5 11.5v5c0 1.5 2.9 2.8 6.5 2.8s6.5-1.3 6.5-2.8v-5" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -72,7 +84,7 @@ export default function BottomNav() {
         >
           {({ isActive }) => (
             <span
-              className="flex flex-col items-center gap-1 rounded-2xl px-3 py-1.5 text-[10.5px] font-medium transition-colors"
+              className="flex flex-col items-center gap-1 rounded-2xl px-2 py-1.5 text-[10px] font-medium transition-colors"
               style={{
                 background: isActive ? 'var(--mango-soft)' : 'transparent',
                 color: isActive ? 'var(--mango)' : 'var(--cream-soft)',

@@ -21,14 +21,14 @@ function ChipCategoria({ cat, selecionada, onClick }) {
         selecionada ? 'bg-[var(--mango)] text-[var(--mango-ink)]' : 'bg-[var(--bg-soft)] text-[var(--ink)]'
       }`}
     >
-      {cat.icon} {cat.label}
+      {cat.label}
     </button>
   );
 }
 
 const SETOR_INFO = {
-  produtos: { label: 'Produtos', icon: '🧺' },
-  maquina: { label: 'Serviços', icon: '🛠️' },
+  produtos: { label: 'Produtos' },
+  maquina: { label: 'Serviços' },
 };
 
 // Categorias cujo setor é automático (não perguntamos ao utilizador).
@@ -118,7 +118,7 @@ export default function Caixa() {
           <>
             <span>Entradas <b className="font-mono-ref text-[var(--paper)]">{formatMoney(totalEntradasHoje)}</b></span>
             <span>Saídas <b className="font-mono-ref text-[var(--paper)]">{formatMoney(totalSaidasHoje)}</b></span>
-            <span>📈 Lucro Real <b className="font-mono-ref text-[var(--paper)]">{formatMoney(lucro.lucro)} MT</b></span>
+            <span>Lucro Real <b className="font-mono-ref text-[var(--paper)]">{formatMoney(lucro.lucro)} MT</b></span>
           </>
         }
       >
@@ -131,7 +131,7 @@ export default function Caixa() {
           const saldoSetor = setor === 'produtos' ? saldoProdutosHoje : saldoMaquinaHoje;
           return (
             <section key={setor} className="cartao-azul rounded-2xl p-4 text-[var(--paper)]">
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--paper)]/60">{info.icon} Saldo {info.label}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--paper)]/60">Saldo {info.label}</p>
               <p className="font-display mt-1 text-xl font-bold leading-none">
                 {formatMoney(saldoSetor)}
                 <span className="ml-1 text-xs font-semibold text-[var(--paper)]/50">MT</span>
@@ -166,15 +166,15 @@ export default function Caixa() {
         ) : (
           <div>
             {doHoje.map((t) => {
-              const cat = CAT_LOOKUP[t.categoria] || { icon: '💰', label: t.categoria };
+              const cat = CAT_LOOKUP[t.categoria] || { label: t.categoria };
               return (
                 <div key={t.id} className="flex items-center gap-3 border-b border-dashed border-[var(--ink)]/10 py-3 last:border-none">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-soft)] text-base">{cat.icon}</div>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-soft)] font-display text-sm font-bold">{(cat.label || '?')[0]}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold text-[var(--ink)]">
                       {cat.label}
                       <span className="rounded-full bg-[var(--bg-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-soft)]">
-                        {SETOR_INFO[t.setor || 'produtos'].icon} {SETOR_INFO[t.setor || 'produtos'].label}
+                        {SETOR_INFO[t.setor || 'produtos'].label}
                       </span>
                     </div>
                     {t.nota && <div className="truncate text-[12px] text-[var(--ink-soft)]">{t.nota}</div>}
@@ -183,7 +183,7 @@ export default function Caixa() {
                   <div className={`font-mono-ref shrink-0 text-sm font-semibold ${t.tipo === 'entrada' ? 'text-[var(--teal)]' : 'text-[var(--brick)]'}`}>
                     {t.tipo === 'entrada' ? '+' : '−'} {formatMoney(t.valor)}
                   </div>
-                  <button onClick={async () => { const ok = await confirmar('Apagar este registo?', { perigo: true, textoOk: 'Apagar' }); if (ok) deleteTransacao(t.id); }} className="shrink-0 p-1 text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
+                  <button onClick={async () => { const ok = await confirmar(t.categoria === 'poupanca' ? 'Este registo é uma poupança. Se apagares, o movimento também sai da Poupança e o dinheiro volta ao saldo. Apagar?' : 'Apagar este registo?', { perigo: true, textoOk: 'Apagar' }); if (ok) deleteTransacao(t.id); }} className="shrink-0 p-1 text-[var(--ink-soft)] opacity-50 hover:opacity-100">✕</button>
                 </div>
               );
             })}
@@ -237,7 +237,7 @@ export default function Caixa() {
           {categoria && (
             setorAutomatico ? (
               <p className="text-xs text-[var(--ink-soft)]">
-                Setor: <b className="text-[var(--ink)]">{SETOR_INFO[setorAutomatico].icon} {SETOR_INFO[setorAutomatico].label}</b>
+                Setor: <b className="text-[var(--ink)]">{SETOR_INFO[setorAutomatico].label}</b>
               </p>
             ) : (
               <Campo label="Setor">
@@ -251,7 +251,7 @@ export default function Caixa() {
                         setorTransacao === id ? 'bg-[var(--mango)] text-[var(--mango-ink)]' : 'bg-[var(--bg-soft)] text-[var(--ink)]'
                       }`}
                     >
-                      {info.icon} {info.label}
+                      {info.label}
                     </button>
                   ))}
                 </div>
@@ -284,7 +284,7 @@ export default function Caixa() {
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />
           </Campo>
           <Campo label="Nota (opcional)">
-            <input className="campo" type="text" maxLength={40} placeholder="Ex: Cliente da esquina" value={nota} onChange={(e) => setNota(e.target.value)} />
+            <input className="campo" type="text" maxLength={40} placeholder="Cliente da esquina" value={nota} onChange={(e) => setNota(e.target.value)} />
           </Campo>
 
           <div className="flex gap-2 pt-1">

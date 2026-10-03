@@ -9,6 +9,7 @@ import Produtos from './pages/Produtos';
 import Xitique from './pages/Xitique';
 import Poupanca from './pages/Poupanca';
 import Perfil from './pages/Perfil';
+import Despesas from './pages/Despesas';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
                 <Route path="/produtos" element={<Produtos />} />
                 <Route path="/xitique" element={<Xitique />} />
                 <Route path="/poupanca" element={<Poupanca />} />
+                <Route path="/despesas" element={<Despesas />} />
                 <Route path="/perfil" element={<Perfil />} />
               </Routes>
             </AuthGate>

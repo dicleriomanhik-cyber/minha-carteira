@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import Modal from './Modal';
 import PillButton from './PillButton';
 import { useData } from '../context/DataContext';
-import { CAT_LOOKUP } from '../context/DataContext';
-import { formatMoney, formatDataCurta, formatDataLonga, periodoLabel, dateKey } from '../utils/format';
+import { CAT_LOOKUP, DESPESA_GRUPOS, DESPESA_IDS } from '../context/DataContext';
+import { semEmoji, formatMoney, formatDataCurta, formatDataLonga, periodoLabel, dateKey } from '../utils/format';
 
 const MESES_LONGO = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -49,6 +49,19 @@ function Linha({ label, valor }) {
   );
 }
 
+function ItemFiado({ titulo, sub, valor, sinal, bom }) {
+  const verde = bom !== undefined ? bom : sinal !== '+';
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5 text-sm">
+      <span className="min-w-0">
+        <span className="block truncate text-[var(--ink)]">{titulo}</span>
+        <span className="block text-[11.5px] text-[var(--ink-soft)]">{sub}</span>
+      </span>
+      <span className={`font-mono-ref shrink-0 font-semibold ${verde ? 'text-[var(--teal)]' : 'text-[var(--brick)]'}`}>{sinal} {formatMoney(valor)} MT</span>
+    </div>
+  );
+}
+
 function LinhaSaidaSetor({ label, produtos, maquina, total, destaque }) {
   return (
     <div className={`flex items-center justify-between py-1.5 text-sm ${destaque ? 'font-semibold' : ''}`}>
@@ -74,7 +87,7 @@ function Seccao({ titulo, children }) {
 export default function RelatorioModal({ aberto, aoFechar }) {
   const [periodo, setPeriodo] = useState('dia');
   const [desloc, setDesloc] = useState(0);
-  const { transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado } = useData();
+  const { transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado, metas, totalPoupancaCalc } = useData();
 
   const dados = useMemo(() => {
     const txs = transacoes.filter((t) => dentroPeriodo(t.dateKey, periodo, desloc));
@@ -88,9 +101,46 @@ export default function RelatorioModal({ aberto, aoFechar }) {
     const retiradoPoupanca = movimentosPoupanca.filter((m) => m.tipo === 'retirada' && dentroPeriodo(m.dateKey, periodo, desloc)).reduce((s, m) => s + m.valor, 0);
     const recebidoFiados = txs.filter((t) => t.tipo === 'entrada' && (t.categoria === 'fiado_recebido' || t.categoria === 'fiado_sinal')).reduce((s, t) => s + t.valor, 0);
     const emAbertoFiados = fiados.filter((f) => saldoFiado(f) > 0).reduce((s, f) => s + saldoFiado(f), 0);
+    const arred = (n) => Math.round(n * 100) / 100;
+    const dkDe = (ts) => dateKey(new Date(ts));
+    const fiadosFeitos = [];
+    const fiadosPagos = [];
+    fiados.forEach((f) => {
+      const aumentos = f.aumentos || [];
+      const feitoEm = dkDe(f.criadoEm);
+      if (dentroPeriodo(feitoEm, periodo, desloc)) {
+        const inicial = arred((f.valorTotal || 0) - aumentos.reduce((s, a) => s + a.valor, 0));
+        fiadosFeitos.push({ chave: f.id + '-novo', cliente: f.cliente, texto: f.produtoInicial || f.produto, valor: inicial, ts: f.criadoEm, aumento: false });
+      }
+      aumentos.forEach((a, i) => {
+        if (dentroPeriodo(dkDe(a.timestamp), periodo, desloc)) {
+          fiadosFeitos.push({ chave: f.id + '-aum' + i, cliente: f.cliente, texto: a.descricao, valor: a.valor, ts: a.timestamp, aumento: true });
+        }
+      });
+      (f.pagamentos || []).forEach((p, i) => {
+        if (dentroPeriodo(dkDe(p.timestamp), periodo, desloc)) {
+          fiadosPagos.push({ chave: f.id + '-pag' + i, cliente: f.cliente, texto: f.produto, valor: p.valor, ts: p.timestamp, feitoEm, pagoEm: dkDe(p.timestamp) });
+        }
+      });
+    });
+    fiadosFeitos.sort((a, b) => b.ts - a.ts);
+    fiadosPagos.sort((a, b) => b.ts - a.ts);
+    const totalFiadosFeitos = fiadosFeitos.reduce((s, x) => s + x.valor, 0);
+    const totalFiadosPagos = fiadosPagos.reduce((s, x) => s + x.valor, 0);
+    const movsPoupanca = movimentosPoupanca
+      .filter((m) => dentroPeriodo(m.dateKey || dateKey(new Date(m.timestamp)), periodo, desloc))
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .map((m) => ({ ...m, meta: (metas.find((x) => x.id === m.metaId) || {}).nome }));
     const vendasComStock = txs.filter((t) => t.tipo === 'entrada' && t.produtoId);
     const receitaStock = vendasComStock.reduce((s, t) => s + t.valor, 0);
     const custoStock = vendasComStock.reduce((s, t) => s + (t.custoTotal || 0), 0);
+
+    const despTxs = txs.filter((t) => t.tipo === 'saida' && DESPESA_IDS.has(t.categoria)).sort((a, b) => b.timestamp - a.timestamp);
+    const despPorGrupo = DESPESA_GRUPOS.map((g) => ({
+      label: g.label,
+      total: despTxs.filter((t) => g.itens.some((i) => i.id === t.categoria)).reduce((s, t) => s + t.valor, 0),
+    })).filter((g) => g.total > 0);
+    const totalDespesas = despTxs.reduce((s, t) => s + t.valor, 0);
 
     const porDiaMap = new Map();
     txs.forEach((t) => {
@@ -113,10 +163,10 @@ export default function RelatorioModal({ aberto, aoFechar }) {
 
     return {
       totalEntradas, totalSaidas, totalProdutos, totalMaquina, pagXitique, entXitique, guardadoPoupanca, retiradoPoupanca,
-      recebidoFiados, emAbertoFiados, receitaStock, custoStock, porDia,
-      saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal,
+      recebidoFiados, emAbertoFiados, movsPoupanca, fiadosFeitos, fiadosPagos, totalFiadosFeitos, totalFiadosPagos, receitaStock, custoStock, porDia,
+      saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal, despTxs, despPorGrupo, totalDespesas,
     };
-  }, [periodo, desloc, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado]);
+  }, [periodo, desloc, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado, metas]);
 
   return (
     <Modal titulo="Relatório" aberto={aberto} aoFechar={aoFechar} tamanho="larga">
@@ -135,8 +185,8 @@ export default function RelatorioModal({ aberto, aoFechar }) {
 
       <Seccao titulo="Caixa do Dia">
         <Linha label="Entradas" valor={dados.totalEntradas} />
-        <Linha label="🧺 Produtos" valor={dados.totalProdutos} />
-        <Linha label="🛠️ Serviços" valor={dados.totalMaquina} />
+        <Linha label="Produtos" valor={dados.totalProdutos} />
+        <Linha label="Serviços" valor={dados.totalMaquina} />
         <Linha label="Saídas" valor={dados.totalSaidas} />
       </Seccao>
 
@@ -148,16 +198,36 @@ export default function RelatorioModal({ aberto, aoFechar }) {
             <div className="flex items-center justify-between py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">
               <span>Categoria</span>
               <span className="flex gap-3">
-                <span className="w-16 text-right">🧺 Prod.</span>
-                <span className="w-16 text-right">⚙️ Máq.</span>
+                <span className="w-16 text-right">Prod.</span>
+                <span className="w-16 text-right">Serv.</span>
                 <span className="w-16 text-right">Total</span>
               </span>
             </div>
             {dados.saidasPorCategoria.map((c) => {
-              const cat = CAT_LOOKUP[c.categoria] || { icon: '💰', label: c.categoria };
-              return <LinhaSaidaSetor key={c.categoria} label={`${cat.icon} ${cat.label}`} produtos={c.produtos} maquina={c.maquina} total={c.total} />;
+              const cat = CAT_LOOKUP[c.categoria] || { label: c.categoria };
+              return <LinhaSaidaSetor key={c.categoria} label={cat.label} produtos={c.produtos} maquina={c.maquina} total={c.total} />;
             })}
             <LinhaSaidaSetor label="Total Geral" produtos={dados.saidasProdutosTotal} maquina={dados.saidasMaquinaTotal} total={dados.totalSaidas} destaque />
+          </>
+        )}
+      </Seccao>
+
+      <Seccao titulo="Salários e Despesas">
+        {dados.despTxs.length === 0 ? (
+          <p className="py-2 text-sm text-[var(--ink-soft)]">Sem salários nem despesas neste período.</p>
+        ) : (
+          <>
+            {dados.despPorGrupo.map((g) => <Linha key={g.label} label={g.label} valor={g.total} />)}
+            {dados.despTxs.map((t) => (
+              <ItemFiado
+                key={t.id}
+                titulo={`${(CAT_LOOKUP[t.categoria] || {}).label || t.categoria}${t.pessoa ? ' · ' + t.pessoa : ''}`}
+                sub={`${formatDataCurta(t.dateKey)}${t.nota ? ' · ' + t.nota : ''}`}
+                valor={t.valor}
+                sinal="−"
+              />
+            ))}
+            <Linha label="Total de salários e despesas" valor={dados.totalDespesas} />
           </>
         )}
       </Seccao>
@@ -183,8 +253,30 @@ export default function RelatorioModal({ aberto, aoFechar }) {
         <Linha label="Lucro real" valor={dados.receitaStock - dados.custoStock} />
       </Seccao>
 
-      <Seccao titulo="Fiados">
-        <Linha label="Recebido no período" valor={dados.recebidoFiados} />
+      <Seccao titulo="Fiados feitos">
+        {dados.fiadosFeitos.length === 0 ? (
+          <p className="py-2 text-sm text-[var(--ink-soft)]">Nenhum fiado novo neste período.</p>
+        ) : (
+          <>
+            {dados.fiadosFeitos.map((x) => (
+              <ItemFiado key={x.chave} titulo={`${x.cliente} · ${semEmoji(x.texto)}`} sub={`${x.aumento ? 'Aumento de dívida' : 'Dívida feita'} em ${formatDataCurta(dateKey(new Date(x.ts)))}`} valor={x.valor} sinal="+" />
+            ))}
+            <Linha label="Total de dívidas feitas" valor={dados.totalFiadosFeitos} />
+          </>
+        )}
+      </Seccao>
+
+      <Seccao titulo="Fiados pagos">
+        {dados.fiadosPagos.length === 0 ? (
+          <p className="py-2 text-sm text-[var(--ink-soft)]">Nenhum pagamento de fiado neste período.</p>
+        ) : (
+          <>
+            {dados.fiadosPagos.map((x) => (
+              <ItemFiado key={x.chave} titulo={`${x.cliente} · ${semEmoji(x.texto)}`} sub={`Dívida feita em ${formatDataCurta(x.feitoEm)} · paga em ${formatDataCurta(x.pagoEm)}`} valor={x.valor} sinal="−" />
+            ))}
+            <Linha label="Total pago" valor={dados.totalFiadosPagos} />
+          </>
+        )}
         <Linha label="Em aberto (total atual)" valor={dados.emAbertoFiados} />
       </Seccao>
 
@@ -196,6 +288,17 @@ export default function RelatorioModal({ aberto, aoFechar }) {
       <Seccao titulo="Poupança">
         <Linha label="Guardado" valor={dados.guardadoPoupanca} />
         <Linha label="Retirado" valor={dados.retiradoPoupanca} />
+        {dados.movsPoupanca.map((m) => (
+          <ItemFiado
+            key={m.id}
+            titulo={`${m.tipo === 'deposito' ? 'Guardado' : 'Retirado'}${m.nota ? ' · ' + m.nota : ''}`}
+            sub={`${formatDataCurta(m.dateKey || dateKey(new Date(m.timestamp)))}${m.meta ? ' · ' + m.meta : ''}`}
+            valor={m.valor}
+            sinal={m.tipo === 'deposito' ? '+' : '−'}
+            bom={m.tipo === 'deposito'}
+          />
+        ))}
+        <Linha label="Total na Poupança (atual)" valor={totalPoupancaCalc} />
       </Seccao>
     </Modal>
   );

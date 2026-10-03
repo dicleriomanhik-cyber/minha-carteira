@@ -33,8 +33,8 @@ export default function ConfigModal({ aberto, aoFechar }) {
         Os teus dados ficam guardados só neste telemóvel. Faz backup regularmente — se trocares de aparelho ou limpares o browser, os dados não guardados perdem-se.
       </p>
       <div className="space-y-2.5">
-        <Botao onClick={exportarBackup}>⬇️ Exportar Backup</Botao>
-        <Botao variante="secundario" onClick={() => fileRef.current?.click()}>⬆️ Importar Backup</Botao>
+        <Botao onClick={exportarBackup}>Exportar Backup</Botao>
+        <Botao variante="secundario" onClick={() => fileRef.current?.click()}>Importar Backup</Botao>
         <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={aoImportar} />
       </div>
       <div className="mt-5">

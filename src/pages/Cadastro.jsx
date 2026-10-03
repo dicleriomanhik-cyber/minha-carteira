@@ -41,7 +41,7 @@ export default function Cadastro({ aoIrParaLogin }) {
   if (sucesso) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-        <div className="text-5xl">📩</div>
+        <svg viewBox="0 0 24 24" className="h-14 w-14 text-[var(--mango)]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg>
         <h1 className="font-display text-xl font-bold text-[var(--ink)]">Confirma o teu email</h1>
         <p className="max-w-xs text-sm text-[var(--ink-soft)]">
           Enviámos um link de confirmação para <strong>{email}</strong>. Abre o email e toca no link para ativares a tua conta, depois volta aqui e entra.

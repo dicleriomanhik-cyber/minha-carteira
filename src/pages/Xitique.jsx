@@ -11,6 +11,7 @@ import { useData } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, iniciais, HOJE_KEY } from '../utils/format';
 import { linkWhatsApp } from '../utils/whatsapp';
+import { IconeWhatsApp } from '../components/Icons';
 
 export default function Xitique() {
   const {
@@ -143,12 +144,12 @@ export default function Xitique() {
                 subtitulo={`Combinado: ${formatMoney(p.valorCombinado)} MT`}
                 acao={
                   <span className="flex shrink-0 items-center gap-1.5">
-                    {!pago && <a href={linkWhatsApp(p.telefone, `Olá ${p.nome}, lembrete do xitique: o valor combinado de ${formatMoney(p.valorCombinado)} MT está por pagar. Obrigado!`)} target="_blank" rel="noopener noreferrer" aria-label="Lembrar por WhatsApp" title="Lembrar por WhatsApp" className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--teal-soft)] text-sm">💬</a>}
+                    {!pago && <a href={linkWhatsApp(p.telefone, `Olá ${p.nome}, lembrete do xitique: o valor combinado de ${formatMoney(p.valorCombinado)} MT está por pagar. Obrigado!`)} target="_blank" rel="noopener noreferrer" aria-label="Lembrar por WhatsApp" title="Lembrar por WhatsApp" className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white"><IconeWhatsApp className="h-4 w-4" /></a>}
                     <button
                     onClick={() => togglePagamento(p)}
                     className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${pago ? 'bg-[var(--teal-soft)] text-[var(--teal)]' : 'border border-[var(--ink-soft)]/25 text-[var(--ink-soft)]'}`}
                   >
-                    {pago ? '✓ Pagou' : 'Marcar Pago'}
+                    {pago ? 'Pagou' : 'Marcar Pago'}
                   </button>
                   </span>
                 }
@@ -193,13 +194,13 @@ export default function Xitique() {
       <Modal titulo={editandoId ? 'Editar Participante' : 'Novo Participante'} aberto={modalParticipante} aoFechar={() => setModalParticipante(false)}>
         <div className="space-y-4">
           <Campo label="Nome">
-            <input className="campo" maxLength={30} placeholder="Ex: Dona Amélia" value={nome} onChange={(e) => setNome(e.target.value)} />
+            <input className="campo" maxLength={30} placeholder="Dona Amélia" value={nome} onChange={(e) => setNome(e.target.value)} />
           </Campo>
           <Campo label="Valor Combinado (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorCombinado} onChange={(e) => setValorCombinado(e.target.value)} />
           </Campo>
           <Campo label="WhatsApp (opcional)">
-            <input className="campo" type="tel" inputMode="tel" placeholder="Ex: 84 123 4567" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+            <input className="campo" type="tel" inputMode="tel" placeholder="84 123 4567" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
           </Campo>
           <div className="flex gap-2 pt-1">
             {editandoId && <Botao variante="perigo" onClick={apagarAtual}>Apagar</Botao>}

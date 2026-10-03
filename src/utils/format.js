@@ -109,3 +109,9 @@ export function periodoLabel(periodo) {
 export function novoId() {
   return Date.now() + '-' + Math.random().toString(36).slice(2, 7);
 }
+
+
+// Tira emojis de textos escritos pelo utilizador (nomes, notas, produtos) para mostrar na app.
+export function semEmoji(t) {
+  return String(t ?? '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '').replace(/\s{2,}/g, ' ').replace(/^[\s,]+/, '').trim();
+}
