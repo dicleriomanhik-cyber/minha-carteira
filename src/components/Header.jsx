@@ -16,7 +16,6 @@ export default function Header({ aoAbrirRelatorio }) {
         <div className="flex items-center gap-2.5">
           <div>
             <span className="block font-display text-lg font-extrabold tracking-tight leading-tight text-[var(--mango)]">Minha Carteira</span>
-            <span className="block text-[10px] leading-tight text-[var(--cream-soft)]">Powered by SmartMetrics</span>
           </div>
         </div>
         <button

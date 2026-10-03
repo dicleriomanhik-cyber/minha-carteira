@@ -3,13 +3,41 @@ import Modal from './Modal';
 import PillButton from './PillButton';
 import { useData } from '../context/DataContext';
 import { CAT_LOOKUP } from '../context/DataContext';
-import { formatMoney, formatDataCurta, periodoLabel, HOJE_KEY, seteDiasAtrasKey } from '../utils/format';
+import { formatMoney, formatDataCurta, formatDataLonga, periodoLabel, dateKey } from '../utils/format';
 
-function dentroPeriodo(dk, periodo) {
-  if (periodo === 'dia') return dk === HOJE_KEY;
-  if (periodo === 'semana') return dk >= seteDiasAtrasKey() && dk <= HOJE_KEY;
-  if (periodo === 'mes') return dk.slice(0, 7) === HOJE_KEY.slice(0, 7);
-  return false;
+const MESES_LONGO = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+// Intervalo [início, fim] do período. desloc=0 é o atual; 1 é o anterior; e assim por diante.
+function intervalo(periodo, desloc) {
+  if (periodo === 'tudo') return ['0000-00-00', '9999-99-99'];
+  const base = new Date();
+  base.setHours(12, 0, 0, 0);
+  if (periodo === 'dia') {
+    const d = new Date(base); d.setDate(d.getDate() - desloc);
+    return [dateKey(d), dateKey(d)];
+  }
+  if (periodo === 'semana') {
+    const fim = new Date(base); fim.setDate(fim.getDate() - 7 * desloc);
+    const ini = new Date(fim); ini.setDate(ini.getDate() - 6);
+    return [dateKey(ini), dateKey(fim)];
+  }
+  const ini = new Date(base.getFullYear(), base.getMonth() - desloc, 1, 12);
+  const fim = new Date(ini.getFullYear(), ini.getMonth() + 1, 0, 12);
+  return [dateKey(ini), dateKey(fim)];
+}
+
+function dentroPeriodo(dk, periodo, desloc) {
+  const [a, b] = intervalo(periodo, desloc);
+  return dk >= a && dk <= b;
+}
+
+function rotuloPeriodo(periodo, desloc) {
+  if (periodo === 'tudo') return 'Desde o primeiro registo';
+  if (desloc === 0) return periodoLabel(periodo);
+  const [a, b] = intervalo(periodo, desloc);
+  if (periodo === 'dia') return formatDataLonga(a);
+  if (periodo === 'semana') return `${formatDataLonga(a)} — ${formatDataLonga(b)}`;
+  return `${MESES_LONGO[Number(a.slice(5, 7)) - 1]} de ${a.slice(0, 4)}`;
 }
 
 function Linha({ label, valor }) {
@@ -45,18 +73,19 @@ function Seccao({ titulo, children }) {
 
 export default function RelatorioModal({ aberto, aoFechar }) {
   const [periodo, setPeriodo] = useState('dia');
+  const [desloc, setDesloc] = useState(0);
   const { transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado } = useData();
 
   const dados = useMemo(() => {
-    const txs = transacoes.filter((t) => dentroPeriodo(t.dateKey, periodo));
+    const txs = transacoes.filter((t) => dentroPeriodo(t.dateKey, periodo, desloc));
     const totalEntradas = txs.filter((t) => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0);
     const totalSaidas = txs.filter((t) => t.tipo === 'saida').reduce((s, t) => s + t.valor, 0);
     const totalProdutos = txs.filter((t) => t.tipo === 'entrada' && t.categoria === 'venda').reduce((s, t) => s + t.valor, 0);
     const totalMaquina = txs.filter((t) => t.tipo === 'entrada' && t.categoria === 'maquina').reduce((s, t) => s + t.valor, 0);
-    const pagXitique = pagamentos.filter((p) => dentroPeriodo(p.dateKey, periodo)).reduce((s, p) => s + p.valor, 0);
-    const entXitique = entregas.filter((e) => dentroPeriodo(e.dateKey, periodo)).reduce((s, e) => s + e.valor, 0);
-    const guardadoPoupanca = movimentosPoupanca.filter((m) => m.tipo === 'deposito' && dentroPeriodo(m.dateKey, periodo)).reduce((s, m) => s + m.valor, 0);
-    const retiradoPoupanca = movimentosPoupanca.filter((m) => m.tipo === 'retirada' && dentroPeriodo(m.dateKey, periodo)).reduce((s, m) => s + m.valor, 0);
+    const pagXitique = pagamentos.filter((p) => dentroPeriodo(p.dateKey, periodo, desloc)).reduce((s, p) => s + p.valor, 0);
+    const entXitique = entregas.filter((e) => dentroPeriodo(e.dateKey, periodo, desloc)).reduce((s, e) => s + e.valor, 0);
+    const guardadoPoupanca = movimentosPoupanca.filter((m) => m.tipo === 'deposito' && dentroPeriodo(m.dateKey, periodo, desloc)).reduce((s, m) => s + m.valor, 0);
+    const retiradoPoupanca = movimentosPoupanca.filter((m) => m.tipo === 'retirada' && dentroPeriodo(m.dateKey, periodo, desloc)).reduce((s, m) => s + m.valor, 0);
     const recebidoFiados = txs.filter((t) => t.tipo === 'entrada' && (t.categoria === 'fiado_recebido' || t.categoria === 'fiado_sinal')).reduce((s, t) => s + t.valor, 0);
     const emAbertoFiados = fiados.filter((f) => saldoFiado(f) > 0).reduce((s, f) => s + saldoFiado(f), 0);
     const vendasComStock = txs.filter((t) => t.tipo === 'entrada' && t.produtoId);
@@ -87,22 +116,27 @@ export default function RelatorioModal({ aberto, aoFechar }) {
       recebidoFiados, emAbertoFiados, receitaStock, custoStock, porDia,
       saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal,
     };
-  }, [periodo, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado]);
+  }, [periodo, desloc, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado]);
 
   return (
     <Modal titulo="Relatório" aberto={aberto} aoFechar={aoFechar} tamanho="larga">
       <div className="flex gap-2">
-        <PillButton ativo={periodo === 'dia'} onClick={() => setPeriodo('dia')}>Diário</PillButton>
-        <PillButton ativo={periodo === 'semana'} onClick={() => setPeriodo('semana')}>Semanal</PillButton>
-        <PillButton ativo={periodo === 'mes'} onClick={() => setPeriodo('mes')}>Mensal</PillButton>
+        <PillButton ativo={periodo === 'dia'} onClick={() => { setPeriodo('dia'); setDesloc(0); }}>Diário</PillButton>
+        <PillButton ativo={periodo === 'semana'} onClick={() => { setPeriodo('semana'); setDesloc(0); }}>Semanal</PillButton>
+        <PillButton ativo={periodo === 'mes'} onClick={() => { setPeriodo('mes'); setDesloc(0); }}>Mensal</PillButton>
+        <PillButton ativo={periodo === 'tudo'} onClick={() => { setPeriodo('tudo'); setDesloc(0); }}>Total</PillButton>
       </div>
 
-      <p className="mt-3 text-center text-xs font-medium capitalize text-[var(--ink-soft)]">{periodoLabel(periodo)}</p>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <button type="button" aria-label="Período anterior" disabled={periodo === 'tudo'} onClick={() => setDesloc((d) => d + 1)} className="rounded-full px-3 py-1 text-lg text-[var(--ink)] disabled:opacity-30">‹</button>
+        <p className="flex-1 text-center text-xs font-medium capitalize text-[var(--ink-soft)]">{rotuloPeriodo(periodo, desloc)}</p>
+        <button type="button" aria-label="Período seguinte" disabled={periodo === 'tudo' || desloc === 0} onClick={() => setDesloc((d) => Math.max(0, d - 1))} className="rounded-full px-3 py-1 text-lg text-[var(--ink)] disabled:opacity-30">›</button>
+      </div>
 
       <Seccao titulo="Caixa do Dia">
         <Linha label="Entradas" valor={dados.totalEntradas} />
         <Linha label="🧺 Produtos" valor={dados.totalProdutos} />
-        <Linha label="⚙️ Máquina" valor={dados.totalMaquina} />
+        <Linha label="🛠️ Serviços" valor={dados.totalMaquina} />
         <Linha label="Saídas" valor={dados.totalSaidas} />
       </Seccao>
 

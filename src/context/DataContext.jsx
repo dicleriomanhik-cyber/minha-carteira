@@ -21,7 +21,7 @@ export const BACKUP_KEYS = [
 export const CATEGORIAS = {
   entrada: [
     { id: 'venda', label: 'Venda de Produtos', icon: '🧺' },
-    { id: 'maquina', label: 'Máquina de Moer', icon: '⚙️' },
+    { id: 'maquina', label: 'Serviços', icon: '🛠️' },
     { id: 'outra_entrada', label: 'Outra Entrada', icon: '➕' },
   ],
   saida: [
@@ -131,10 +131,29 @@ export function DataProvider({ children }) {
     return v;
   }, []);
 
-  const getSaldoInicialSetor = useCallback((dk, setor) => {
-    const v = normalizarSaldoInicialDia(saldoInicialMap[dk]);
-    return v ? (v[setor] || 0) : 0;
+  // Saldos iniciais definidos UMA vez, no Perfil (guardados em saldoInicialMap.__global).
+  // Se ainda não existir, usa o saldo do primeiro dia antigo (compatibilidade).
+  const saldoInicialGlobal = useMemo(() => {
+    const g = saldoInicialMap.__global;
+    if (g) return { produtos: g.produtos || 0, maquina: g.maquina || 0 };
+    const dias = Object.keys(saldoInicialMap).filter((k) => !k.startsWith('__')).sort();
+    if (!dias.length) return { produtos: 0, maquina: 0 };
+    const v = normalizarSaldoInicialDia(saldoInicialMap[dias[0]]);
+    return { produtos: v.produtos || 0, maquina: v.maquina || 0 };
   }, [saldoInicialMap, normalizarSaldoInicialDia]);
+
+  const setSaldoInicialGlobal = useCallback((setor, valor) => {
+    setSaldoInicialMap((m) => ({ ...m, __global: { ...saldoInicialGlobal, [setor]: valor } }));
+  }, [setSaldoInicialMap, saldoInicialGlobal]);
+
+  // Saldo de abertura de um dia = inicial global + tudo o que entrou e saiu antes desse dia.
+  // Assim o saldo acumula todos os dias, sem ter de ser definido diariamente.
+  const getSaldoInicialSetor = useCallback((dk, setor) => {
+    const antes = transacoes.filter((t) => (t.setor || 'produtos') === setor && t.dateKey < dk);
+    const ent = antes.filter((t) => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0);
+    const sai = antes.filter((t) => t.tipo === 'saida').reduce((s, t) => s + t.valor, 0);
+    return (saldoInicialGlobal[setor] || 0) + ent - sai;
+  }, [transacoes, saldoInicialGlobal]);
 
   // Mantido por compatibilidade: saldo inicial "total" de um dia (soma dos setores).
   const getSaldoInicial = useCallback((dk) => SETORES.reduce((s, setor) => s + getSaldoInicialSetor(dk, setor), 0), [getSaldoInicialSetor]);
@@ -170,7 +189,7 @@ export function DataProvider({ children }) {
   const saldoFechamentoDia = useCallback((dk) => SETORES.reduce((s, setor) => s + saldoFechamentoDiaSetor(dk, setor), 0), [saldoFechamentoDiaSetor]);
 
   const ultimoDiaAnteriorComDados = useCallback(() => {
-    const chaves = new Set([...transacoes.map((t) => t.dateKey), ...Object.keys(saldoInicialMap)]);
+    const chaves = new Set([...transacoes.map((t) => t.dateKey), ...Object.keys(saldoInicialMap).filter((k) => !k.startsWith('__'))]);
     const anteriores = [...chaves].filter((k) => k < HOJE_KEY).sort((a, b) => b.localeCompare(a));
     return anteriores.length ? anteriores[0] : null;
   }, [transacoes, saldoInicialMap]);
@@ -238,7 +257,7 @@ export function DataProvider({ children }) {
   const historicoDias = useMemo(() => {
     const chavesSet = new Set();
     transacoes.forEach((t) => { if (t.dateKey !== HOJE_KEY) chavesSet.add(t.dateKey); });
-    Object.keys(saldoInicialMap).forEach((k) => { if (k !== HOJE_KEY) chavesSet.add(k); });
+    Object.keys(saldoInicialMap).forEach((k) => { if (k !== HOJE_KEY && !k.startsWith('__')) chavesSet.add(k); });
     return [...chavesSet].sort((a, b) => b.localeCompare(a));
   }, [transacoes, saldoInicialMap]);
 
@@ -437,6 +456,7 @@ export function DataProvider({ children }) {
     carregandoDados,
     setUsuarioNome: setUsuarioNomeState,
     getSaldoInicial, saldoFechamentoDia,
+    saldoInicialGlobal, setSaldoInicialGlobal,
     getSaldoInicialSetor, saldoInicialSetorDefinidoHoje, setSaldoInicialSetorHoje, sugestaoSaldoInicialSetor,
     saldoFechamentoDiaSetor, precisaMigrarSaldoInicialHoje, saldoInicialLegadoHoje,
     saldoProdutosHoje, saldoMaquinaHoje, totalEntradasSetorHoje, totalSaidasSetorHoje,
