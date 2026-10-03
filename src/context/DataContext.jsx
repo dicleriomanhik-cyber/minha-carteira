@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, us
 import { HOJE_KEY, amanhaKey, novoId, mesAtualLabel, timestampParaDia, dateKey, formatMoney } from '../utils/format';
 import { proximaOcorrencia, textoPrazo, TIPOS_LEMBRETE } from '../utils/lembretes';
 import { chaveCliente } from '../utils/clientesFiado';
+import { statusSalario } from '../utils/funcionarios';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -302,6 +303,19 @@ export function DataProvider({ children }) {
   const registarDespesa = useCallback(({ categoria, valor, nota, pessoa, setor = 'produtos', metodo = 'dinheiro', dateKey: dk = HOJE_KEY }) => (
     addTransacao({ tipo: 'saida', categoria, valor, nota, setor, metodo, dateKey: dk, pessoa: pessoa || null })
   ), [addTransacao]);
+
+  // Lista de funcionários com salário fixo. Guardada dentro de saldo_inicial (__funcionarios), por isso sincroniza sem alterar o SQL.
+  const funcionarios = useMemo(() => saldoInicialMap.__funcionarios || [], [saldoInicialMap]);
+  const salvarFuncionario = useCallback(({ id, nome, salario, dia }) => {
+    setSaldoInicialMap((m) => {
+      const lista = m.__funcionarios || [];
+      const dados = { nome, salario: Math.round(salario * 100) / 100, dia };
+      return { ...m, __funcionarios: id ? lista.map((x) => (x.id === id ? { ...x, ...dados } : x)) : [...lista, { id: novoId(), ...dados }] };
+    });
+  }, [setSaldoInicialMap]);
+  const deleteFuncionario = useCallback((id) => {
+    setSaldoInicialMap((m) => ({ ...m, __funcionarios: (m.__funcionarios || []).filter((x) => x.id !== id) }));
+  }, [setSaldoInicialMap]);
 
   const nomesPagos = useMemo(() => [...new Set(transacoes.filter((t) => t.categoria === 'salario_func' && t.pessoa).map((t) => t.pessoa))].sort(), [transacoes]);
 
@@ -629,12 +643,24 @@ export function DataProvider({ children }) {
       const valor = l.valor > 0 ? ` — ${formatMoney(l.valor)} MT` : '';
       alertas.push({ tipo: 'lembrete', texto: `${nome}: ${textoPrazo(o.dias)}${valor}. Toca para ver.` });
     });
+    const salariosPorPagar = funcionarios
+      .map((f) => ({ f, st: statusSalario(f, transacoes) }))
+      .filter(({ st }) => st.falta > 0 && st.chegou);
+    if (salariosPorPagar.length === 1) {
+      const { f, st } = salariosPorPagar[0];
+      const quando = st.atraso === 0 ? 'é hoje o dia de pagar' : `devia ter sido pago no dia ${st.diaEfetivo}`;
+      alertas.push({ tipo: 'salario', texto: `Salário de ${f.nome}: ${quando} — ${formatMoney(st.falta)} MT. Toca para pagar.` });
+    } else if (salariosPorPagar.length > 1) {
+      const total = salariosPorPagar.reduce((s, x) => s + x.st.falta, 0);
+      const nomes = salariosPorPagar.slice(0, 2).map((x) => x.f.nome).join(', ');
+      alertas.push({ tipo: 'salario', texto: `${salariosPorPagar.length} salários por pagar (${formatMoney(total)} MT): ${nomes}${salariosPorPagar.length > 2 ? '…' : ''}. Toca para ver.` });
+    }
     const agora = new Date();
     if (agora.getHours() >= 17 && transacoes.some((t) => t.dateKey === HOJE_KEY) && !fechos[HOJE_KEY]) {
       alertas.push({ tipo: 'fecho', texto: 'Ainda não fizeste o fecho de hoje. Toca para conferir o dinheiro.' });
     }
     return alertas;
-  }, [fiados, produtos, saldoFiado, lembretes, transacoes, fechos]);
+  }, [fiados, produtos, saldoFiado, lembretes, transacoes, fechos, funcionarios]);
 
   /* ---------- Backup ---------- */
   const exportarBackup = useCallback(() => {
@@ -666,7 +692,7 @@ export function DataProvider({ children }) {
     saldoFechamentoDiaSetor, precisaMigrarSaldoInicialHoje, saldoInicialLegadoHoje,
     saldoProdutosHoje, saldoMaquinaHoje, totalEntradasSetorHoje, totalSaidasSetorHoje,
     doHoje, totalEntradasHoje, totalSaidasHoje, saldoHoje, totalProdutosHoje, totalMaquinaHoje, lucroRealHojeCalc,
-    addTransacao, registarDespesa, nomesPagos, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias,
+    addTransacao, registarDespesa, nomesPagos, funcionarios, salvarFuncionario, deleteFuncionario, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias,
     pagouHoje, pagouDia, salvarParticipante, deleteParticipante, desmarcarPagamento, registrarPagamento,
     totalGuardadoXitique, registrarEntrega, deleteEntrega,
     totalPoupancaCalc, guardarPoupanca, depositosSemSaida, descontarDepositosAntigos, retirarPoupanca, deleteMovimentoPoupanca, guardadoMesAtual,

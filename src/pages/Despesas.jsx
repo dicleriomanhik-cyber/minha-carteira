@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
@@ -8,6 +9,8 @@ import Modal from '../components/Modal';
 import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
 import ReciboModal from '../components/ReciboModal';
+import FuncionariosModal from '../components/FuncionariosModal';
+import { statusSalario, chaveNome } from '../utils/funcionarios';
 import { useData, METODOS, DESPESA_GRUPOS, DESPESA_IDS, CAT_LOOKUP } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, formatHora, HOJE_KEY } from '../utils/format';
@@ -18,7 +21,7 @@ const SETORES = [
 ];
 
 export default function Despesas() {
-  const { transacoes, registarDespesa, deleteTransacao, nomesPagos, saldoFechamentoDiaSetor, saldoPorMetodo } = useData();
+  const { transacoes, registarDespesa, deleteTransacao, nomesPagos, funcionarios, saldoFechamentoDiaSetor, saldoPorMetodo } = useData();
   const { confirmar, avisar } = useDialog();
 
   const [aberto, setAberto] = useState(false);
@@ -32,6 +35,23 @@ export default function Despesas() {
   const [metodo, setMetodo] = useState('dinheiro');
   const [verTodos, setVerTodos] = useState(false);
   const [reciboTxId, setReciboTxId] = useState(null);
+  const [funcAberto, setFuncAberto] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Vindo do aviso do Caixa ("Salário de ... por pagar"): abre já a lista de funcionários.
+  useEffect(() => {
+    if (location.state && location.state.abrirFuncionarios) {
+      setFuncAberto(true);
+      navigate('/despesas', { replace: true, state: null });
+    }
+  }, [location.state, navigate]);
+
+  const porPagarFunc = useMemo(
+    () => funcionarios.reduce((s, f) => s + statusSalario(f, transacoes).falta, 0),
+    [funcionarios, transacoes],
+  );
+  const nomesSugestao = useMemo(() => [...new Set([...funcionarios.map((f) => f.nome), ...nomesPagos])].sort(), [funcionarios, nomesPagos]);
 
   const grupo = DESPESA_GRUPOS.find((g) => g.id === grupoId);
   const precisaNome = categoria === 'salario_func';
@@ -49,6 +69,22 @@ export default function Despesas() {
     setGrupoId('salarios'); setCategoria('salario_proprio');
     setValor(''); setPessoa(''); setNota(''); setDia(HOJE_KEY); setSetor('produtos'); setMetodo('dinheiro');
     setAberto(true);
+  }
+
+  function abrirPagarFuncionario(f, falta) {
+    setGrupoId('salarios'); setCategoria('salario_func');
+    setValor(String(falta)); setPessoa(f.nome); setNota(''); setDia(HOJE_KEY); setSetor('produtos'); setMetodo('dinheiro');
+    setFuncAberto(false);
+    setAberto(true);
+  }
+
+  function aoEscreverNome(n) {
+    setPessoa(n);
+    const f = funcionarios.find((x) => chaveNome(x.nome) === chaveNome(n));
+    if (f && !valor) {
+      const st = statusSalario(f, transacoes);
+      if (st.falta > 0) setValor(String(st.falta));
+    }
   }
 
   function escolherGrupo(id) {
@@ -93,6 +129,16 @@ export default function Despesas() {
         Tudo o que registares aqui sai do saldo total do Caixa e aparece no Relatório.
       </p>
 
+      <button onClick={() => setFuncAberto(true)} className="mt-4 flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
+        <span>
+          <span className="block text-sm font-semibold text-[var(--ink)]">Funcionários e salários</span>
+          <span className="mt-0.5 block text-xs text-[var(--ink-soft)]">
+            {funcionarios.length === 0 ? 'Guarda o salário fixo de cada um e paga com um toque' : porPagarFunc > 0 ? `Por pagar este mês: ${formatMoney(porPagarFunc)} MT` : 'Todos os salários deste mês estão pagos'}
+          </span>
+        </span>
+        <span aria-hidden="true" className="text-[var(--ink)]">›</span>
+      </button>
+
       <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Pagamentos</p>
       <section className="mt-2 rounded-2xl bg-[var(--paper)] p-4">
         {lista.length === 0 ? (
@@ -125,6 +171,7 @@ export default function Despesas() {
         </button>
       )}
 
+      <FuncionariosModal aberto={funcAberto} aoFechar={() => setFuncAberto(false)} aoPagar={abrirPagarFuncionario} />
       <ReciboModal aberto={reciboTxId !== null} aoFechar={() => setReciboTxId(null)} txIdInicial={reciboTxId} />
 
       <Modal titulo="Registar pagamento" aberto={aberto} aoFechar={() => setAberto(false)}>
@@ -144,9 +191,9 @@ export default function Despesas() {
           </Campo>
           {precisaNome && (
             <Campo label="Nome do funcionário">
-              <input className="campo" list="nomes-funcionarios" maxLength={40} placeholder="Nome" value={pessoa} onChange={(e) => setPessoa(e.target.value)} />
+              <input className="campo" list="nomes-funcionarios" maxLength={40} placeholder="Nome" value={pessoa} onChange={(e) => aoEscreverNome(e.target.value)} />
               <datalist id="nomes-funcionarios">
-                {nomesPagos.map((n) => <option key={n} value={n} />)}
+                {nomesSugestao.map((n) => <option key={n} value={n} />)}
               </datalist>
             </Campo>
           )}
