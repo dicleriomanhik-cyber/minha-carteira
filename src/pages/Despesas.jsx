@@ -7,6 +7,7 @@ import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
+import ReciboModal from '../components/ReciboModal';
 import { useData, METODOS, DESPESA_GRUPOS, DESPESA_IDS, CAT_LOOKUP } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, formatHora, HOJE_KEY } from '../utils/format';
@@ -30,6 +31,7 @@ export default function Despesas() {
   const [setor, setSetor] = useState('produtos');
   const [metodo, setMetodo] = useState('dinheiro');
   const [verTodos, setVerTodos] = useState(false);
+  const [reciboTxId, setReciboTxId] = useState(null);
 
   const grupo = DESPESA_GRUPOS.find((g) => g.id === grupoId);
   const precisaNome = categoria === 'salario_func';
@@ -105,6 +107,7 @@ export default function Despesas() {
                   <div className="text-[11px] text-[var(--ink-soft)]">
                     {cat.grupo ? cat.grupo + ' · ' : ''}{formatDataExtenso(new Date(t.timestamp))} · {formatHora(t.timestamp)}{t.nota ? ' · ' + t.nota : ''}
                   </div>
+                  <button onClick={() => setReciboTxId(t.id)} className="mt-1 text-[11.5px] font-semibold text-[var(--mango)] active:opacity-70">Comprovativo</button>
                 </div>
                 <div className="font-mono-ref shrink-0 text-sm font-semibold text-[var(--brick)]">− {formatMoney(t.valor)}</div>
                 <button
@@ -121,6 +124,8 @@ export default function Despesas() {
           {verTodos ? 'Mostrar menos' : `Ver todos os ${lista.length} pagamentos`}
         </button>
       )}
+
+      <ReciboModal aberto={reciboTxId !== null} aoFechar={() => setReciboTxId(null)} txIdInicial={reciboTxId} />
 
       <Modal titulo="Registar pagamento" aberto={aberto} aoFechar={() => setAberto(false)}>
         <div className="space-y-4">
