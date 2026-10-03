@@ -63,6 +63,16 @@ export default function Perfil() {
   const [setorSaldo, setSetorSaldo] = useState(null);
   const [valorSaldo, setValorSaldo] = useState('');
   const [termosAberto, setTermosAberto] = useState(false);
+  const [ultimoBackup, setUltimoBackup] = useState(() => { try { return localStorage.getItem('carteira_ultimo_backup') || ''; } catch { return ''; } });
+  function fazerExport() {
+    exportarBackup();
+    const d = new Date().toISOString();
+    try { localStorage.setItem('carteira_ultimo_backup', d); } catch { /* sem armazenamento */ }
+    setUltimoBackup(d);
+  }
+  const diasBackup = ultimoBackup ? Math.floor((Date.now() - new Date(ultimoBackup).getTime()) / 86400000) : null;
+  const corBackup = diasBackup === null ? 'var(--brick)' : diasBackup > 7 ? '#E3A72F' : 'var(--teal)';
+  const textoBackup = diasBackup === null ? 'Ainda sem backup' : `Último backup: ${diasBackup === 0 ? 'hoje' : new Date(ultimoBackup).toLocaleDateString('pt-PT')}`;
 
   async function guardarSaldoInicial() {
     const v = parseFloat(valorSaldo);
@@ -221,12 +231,16 @@ export default function Perfil() {
 
       {/* Definições e backup (movido do Header para dentro do Perfil) */}
       <Modal titulo="Definições e Backup" aberto={aEditar === 'backup'} aoFechar={() => setAEditar(false)}>
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[var(--ink)]/10 bg-[var(--paper)] px-4 py-3">
+          <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: corBackup }} />
+          <p className="text-sm font-bold text-[var(--ink)]">{textoBackup}</p>
+        </div>
         <p className="mb-4 text-sm leading-relaxed text-[var(--ink-soft)]">
           A tua conta sincroniza os dados entre aparelhos. O backup local continua disponível como cópia extra dos dados deste telemóvel.
         </p>
-        <div className="space-y-2.5">
-          <Botao onClick={exportarBackup}>Exportar Backup</Botao>
-          <Botao variante="secundario" onClick={() => fileBackupRef.current?.click()}>Importar Backup</Botao>
+        <div className="space-y-3">
+          <button onClick={fazerExport} className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[var(--mango)] text-base font-bold text-white transition active:scale-[0.98]"><svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" /></svg>Exportar backup</button>
+          <button onClick={() => fileBackupRef.current?.click()} className="flex h-14 w-full items-center justify-center gap-2 rounded-full border-2 border-[var(--mango)] text-base font-bold text-[var(--mango)] transition active:scale-[0.98]"><svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3m0 0L8 7m4-4 4 4M5 21h14" /></svg>Importar backup</button>
           <input ref={fileBackupRef} type="file" accept="application/json" className="hidden" onChange={aoImportarBackup} />
         </div>
       </Modal>

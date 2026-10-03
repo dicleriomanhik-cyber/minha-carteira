@@ -10,6 +10,7 @@ import Linha from '../components/Linha';
 import { useData } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, iniciais, HOJE_KEY } from '../utils/format';
+import { linkWhatsApp } from '../utils/whatsapp';
 
 export default function Xitique() {
   const {
@@ -23,6 +24,7 @@ export default function Xitique() {
   const [editandoId, setEditandoId] = useState(null);
   const [nome, setNome] = useState('');
   const [valorCombinado, setValorCombinado] = useState('');
+  const [telefone, setTelefone] = useState('');
 
   const [modalPagamento, setModalPagamento] = useState(null); // participante
   const [valorPagamento, setValorPagamento] = useState('');
@@ -37,6 +39,7 @@ export default function Xitique() {
     setEditandoId(null);
     setNome('');
     setValorCombinado('');
+    setTelefone('');
     setModalParticipante(true);
   }
 
@@ -44,6 +47,7 @@ export default function Xitique() {
     setEditandoId(p.id);
     setNome(p.nome);
     setValorCombinado(p.valorCombinado);
+    setTelefone(p.telefone || '');
     setModalParticipante(true);
   }
 
@@ -52,7 +56,7 @@ export default function Xitique() {
     const v = parseFloat(valorCombinado);
     if (!n) { await avisar('Introduz o nome do participante.'); return; }
     if (!v || v <= 0) { await avisar('Introduz um valor combinado válido.'); return; }
-    salvarParticipante({ id: editandoId, nome: n, valorCombinado: v });
+    salvarParticipante({ id: editandoId, nome: n, valorCombinado: v, telefone: telefone.trim() });
     setModalParticipante(false);
   }
 
@@ -138,12 +142,15 @@ export default function Xitique() {
                 titulo={p.nome}
                 subtitulo={`Combinado: ${formatMoney(p.valorCombinado)} MT`}
                 acao={
-                  <button
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {!pago && <a href={linkWhatsApp(p.telefone, `Olá ${p.nome}, lembrete do xitique: o valor combinado de ${formatMoney(p.valorCombinado)} MT está por pagar. Obrigado!`)} target="_blank" rel="noopener noreferrer" aria-label="Lembrar por WhatsApp" title="Lembrar por WhatsApp" className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--teal-soft)] text-sm">💬</a>}
+                    <button
                     onClick={() => togglePagamento(p)}
                     className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${pago ? 'bg-[var(--teal-soft)] text-[var(--teal)]' : 'border border-[var(--ink-soft)]/25 text-[var(--ink-soft)]'}`}
                   >
                     {pago ? '✓ Pagou' : 'Marcar Pago'}
                   </button>
+                  </span>
                 }
                 aoApagar={async () => { const ok = await confirmar(`Apagar "${p.nome}" e o seu histórico de pagamentos?`, { perigo: true, textoOk: 'Apagar' }); if (ok) deleteParticipante(p.id); }}
               />
@@ -190,6 +197,9 @@ export default function Xitique() {
           </Campo>
           <Campo label="Valor Combinado (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorCombinado} onChange={(e) => setValorCombinado(e.target.value)} />
+          </Campo>
+          <Campo label="WhatsApp (opcional)">
+            <input className="campo" type="tel" inputMode="tel" placeholder="Ex: 84 123 4567" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
           </Campo>
           <div className="flex gap-2 pt-1">
             {editandoId && <Botao variante="perigo" onClick={apagarAtual}>Apagar</Botao>}

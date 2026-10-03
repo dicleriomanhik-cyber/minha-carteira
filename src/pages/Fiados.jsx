@@ -6,9 +6,10 @@ import Campo from '../components/Campo';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Linha from '../components/Linha';
-import { useData } from '../context/DataContext';
+import { useData, METODOS } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataCurta, iniciais, dateKey } from '../utils/format';
+import { linkWhatsApp } from '../utils/whatsapp';
 
 function Badge({ status }) {
   if (status === 'vencido') return <span className="rounded-full bg-[var(--brick-soft)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--brick)]">🔴 Vencido</span>;
@@ -16,11 +17,13 @@ function Badge({ status }) {
   return null;
 }
 
-const CAMPOS_VAZIOS = { cliente: '', produtoStockId: '', produtoDescricao: '', quantidade: '1', valorTotal: '', valorPago: '0', vencimento: '' };
+const CAMPOS_VAZIOS = { cliente: '', telefone: '', produtoStockId: '', produtoDescricao: '', quantidade: '1', valorTotal: '', valorPago: '0', vencimento: '' };
 
 export default function Fiados() {
   const { fiados, produtos, saldoFiado, statusFiado, nomesClientesFiado, salvarFiado, registarRecebimentoFiado, deleteFiado } = useData();
   const { confirmar, avisar } = useDialog();
+
+  const msgFiado = (f) => `Olá ${f.cliente}, este é um lembrete do valor de ${formatMoney(saldoFiado(f))} MT (${f.produto}) que ficou em fiado, com vencimento em ${formatDataCurta(f.vencimento)}. Obrigado!`;
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
@@ -28,6 +31,7 @@ export default function Fiados() {
 
   const [modalReceber, setModalReceber] = useState(null); // fiado
   const [valorReceber, setValorReceber] = useState('');
+  const [metodoReceber, setMetodoReceber] = useState('dinheiro');
 
   const [modalDetalhe, setModalDetalhe] = useState(null); // fiado
 
@@ -90,13 +94,14 @@ export default function Fiados() {
 
     const quantidade = campos.produtoStockId ? (parseInt(campos.quantidade) || 1) : null;
 
-    const res = salvarFiado({ cliente, produtoStockId: campos.produtoStockId || null, produtoDescricao, quantidade, valorTotal, valorPago, vencimento });
+    const res = salvarFiado({ cliente, telefone: campos.telefone.trim(), produtoStockId: campos.produtoStockId || null, produtoDescricao, quantidade, valorTotal, valorPago, vencimento });
     if (res.erro) { await avisar(res.erro); return; }
     setModalAberto(false);
   }
 
   function abrirReceber(f) {
     setModalReceber(f);
+    setMetodoReceber('dinheiro');
     setValorReceber(saldoFiado(f).toFixed(2));
   }
 
@@ -106,7 +111,7 @@ export default function Fiados() {
     const v = parseFloat(valorReceber);
     if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
     if (v > devido + 0.01) { await avisar('Esse valor é maior que a dívida (' + formatMoney(devido) + ' MT).'); return; }
-    registarRecebimentoFiado(f.id, v, 'fiado_recebido', 'Pagamento de fiado - ' + f.cliente);
+    registarRecebimentoFiado(f.id, v, 'fiado_recebido', 'Pagamento de fiado - ' + f.cliente, metodoReceber);
     setModalReceber(null);
   }
 
@@ -141,9 +146,12 @@ export default function Fiados() {
               badge={<Badge status={statusFiado(f)} />}
               subtitulo={`${f.produto} · deve ${formatMoney(saldoFiado(f))} MT · vence ${formatDataCurta(f.vencimento)}`}
               acao={
-                <button onClick={() => abrirReceber(f)} className="shrink-0 rounded-full border border-[var(--ink-soft)]/25 px-3 py-1.5 text-xs font-semibold text-[var(--ink-soft)]">
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {statusFiado(f) === 'vencido' && <a href={linkWhatsApp(f.telefone, msgFiado(f))} target="_blank" rel="noopener noreferrer" aria-label="Lembrar por WhatsApp" title="Lembrar por WhatsApp" className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--teal-soft)] text-sm">💬</a>}
+                  <button onClick={() => abrirReceber(f)} className="shrink-0 rounded-full border border-[var(--ink-soft)]/25 px-3 py-1.5 text-xs font-semibold text-[var(--ink-soft)]">
                   Receber
                 </button>
+                </span>
               }
               aoApagar={async () => { const ok = await confirmar(`Apagar o fiado de "${f.cliente}" (${f.produto})? Os pagamentos já recebidos continuam no Caixa do Dia.`, { perigo: true, textoOk: 'Apagar' }); if (ok) deleteFiado(f.id); }}
             />
@@ -182,6 +190,10 @@ export default function Fiados() {
             <datalist id="clientes-fiado">
               {nomesClientesFiado.map((n) => <option key={n} value={n} />)}
             </datalist>
+          </Campo>
+
+          <Campo label="WhatsApp do cliente (opcional)">
+            <input className="campo" type="tel" inputMode="tel" placeholder="Ex: 84 123 4567" value={campos.telefone} onChange={(e) => setCampos((c) => ({ ...c, telefone: e.target.value }))} />
           </Campo>
 
           <Campo label="Produto do stock (opcional)">
@@ -227,6 +239,11 @@ export default function Fiados() {
             <p className="text-sm text-[var(--ink-soft)]">
               {modalReceber.cliente} deve {formatMoney(saldoFiado(modalReceber))} MT ({modalReceber.produto}).
             </p>
+            <Campo label="Recebido em">
+              <select className="campo" value={metodoReceber} onChange={(e) => setMetodoReceber(e.target.value)}>
+              {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+            </select>
+            </Campo>
             <Campo label="Valor Recebido (MT)">
               <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorReceber} onChange={(e) => setValorReceber(e.target.value)} />
             </Campo>

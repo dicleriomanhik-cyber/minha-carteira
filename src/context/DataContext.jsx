@@ -31,6 +31,12 @@ export const CATEGORIAS = {
     { id: 'outra_saida', label: 'Outra Saída', icon: '➖' },
   ],
 };
+export const METODOS = [
+  { id: 'dinheiro', label: 'Dinheiro' },
+  { id: 'mpesa', label: 'M-Pesa' },
+  { id: 'emola', label: 'e-Mola' },
+  { id: 'mkesh', label: 'mKesh' },
+];
 export const CAT_LOOKUP = [...CATEGORIAS.entrada, ...CATEGORIAS.saida].reduce((acc, c) => { acc[c.id] = c; return acc; }, {});
 CAT_LOOKUP['poupanca'] = { id: 'poupanca', label: 'Para Poupança', icon: '🐷' };
 CAT_LOOKUP['fiado_recebido'] = { id: 'fiado_recebido', label: 'Fiado Recebido', icon: '📒' };
@@ -223,23 +229,35 @@ export function DataProvider({ children }) {
     return { receita, custo, lucro: receita - custo };
   }, [transacoes]);
 
-  const addTransacao = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId = null, quantidade = null, custoTotal = 0, dateKey: dk = HOJE_KEY }) => {
-    const tx = { id: novoId(), tipo, categoria, valor, nota, setor, timestamp: timestampParaDia(dk), dateKey: dk };
+  const addTransacao = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId = null, quantidade = null, custoTotal = 0, metodo = 'dinheiro', dateKey: dk = HOJE_KEY }) => {
+    const tx = { id: novoId(), tipo, categoria, valor, nota, setor, metodo, timestamp: timestampParaDia(dk), dateKey: dk };
     if (produtoId) { tx.produtoId = produtoId; tx.quantidade = quantidade; tx.custoTotal = custoTotal; }
     setTransacoes((arr) => [...arr, tx]);
     return tx;
   }, [setTransacoes]);
 
-  const registrarVendaComStock = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId, quantidade, dateKey: dk = HOJE_KEY }) => {
+  const registrarVendaComStock = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId, quantidade, metodo, dateKey: dk = HOJE_KEY }) => {
     const p = produtos.find((x) => x.id === produtoId);
     if (!p) return { erro: 'Esse produto já não existe no stock.' };
     if (quantidade > p.quantidade) return { erro: `Só tens ${p.quantidade} unidades de "${p.nome}" em stock.` };
     const custoTotal = quantidade * p.precoCusto;
     setProdutos((arr) => arr.map((x) => (x.id === produtoId ? { ...x, quantidade: x.quantidade - quantidade } : x)));
     const notaFinal = nota ? `${p.nome} x${quantidade} · ${nota}` : `${p.nome} x${quantidade}`;
-    addTransacao({ tipo, categoria, valor, nota: notaFinal, setor, produtoId, quantidade, custoTotal, dateKey: dk });
+    addTransacao({ tipo, categoria, valor, nota: notaFinal, setor, metodo, produtoId, quantidade, custoTotal, dateKey: dk });
     return { ok: true };
   }, [produtos, setProdutos, addTransacao]);
+
+  // Saldo por método de pagamento. O saldo inicial conta como dinheiro e os registos antigos (sem método) também.
+  const saldoPorMetodo = useMemo(() => {
+    const r = {};
+    METODOS.forEach((m) => { r[m.id] = 0; });
+    r.dinheiro += (saldoInicialGlobal.produtos || 0) + (saldoInicialGlobal.maquina || 0);
+    transacoes.forEach((t) => {
+      const m = t.metodo && r[t.metodo] !== undefined ? t.metodo : 'dinheiro';
+      r[m] += t.tipo === 'entrada' ? t.valor : -t.valor;
+    });
+    return r;
+  }, [transacoes, saldoInicialGlobal]);
 
   const deleteTransacao = useCallback((id) => {
     const t = transacoes.find((x) => x.id === id);
@@ -265,11 +283,11 @@ export function DataProvider({ children }) {
   const pagouDia = useCallback((participanteId, dk = HOJE_KEY) => pagamentos.some((p) => p.participanteId === participanteId && p.dateKey === dk), [pagamentos]);
   const pagouHoje = useCallback((participanteId) => pagouDia(participanteId, HOJE_KEY), [pagouDia]);
 
-  const salvarParticipante = useCallback(({ id, nome, valorCombinado }) => {
+  const salvarParticipante = useCallback(({ id, nome, valorCombinado, telefone }) => {
     if (id) {
-      setParticipantes((arr) => arr.map((p) => (p.id === id ? { ...p, nome, valorCombinado } : p)));
+      setParticipantes((arr) => arr.map((p) => (p.id === id ? { ...p, nome, valorCombinado, telefone: telefone || '' } : p)));
     } else {
-      setParticipantes((arr) => [...arr, { id: novoId(), nome, valorCombinado }]);
+      setParticipantes((arr) => [...arr, { id: novoId(), nome, valorCombinado, telefone: telefone || '' }]);
     }
   }, [setParticipantes]);
 
@@ -305,14 +323,14 @@ export function DataProvider({ children }) {
   /* ---------- Poupança ---------- */
   const totalPoupancaCalc = useMemo(() => movimentosPoupanca.reduce((s, m) => (m.tipo === 'deposito' ? s + m.valor : s - m.valor), 0), [movimentosPoupanca]);
 
-  const guardarPoupanca = useCallback((valor, nota, dk = HOJE_KEY) => {
+  const guardarPoupanca = useCallback((valor, nota, dk = HOJE_KEY, metaId) => {
     // Assunção: retirada para poupança sai do saldo de Produtos (dinheiro geral do bolso).
     const tx = addTransacao({ tipo: 'saida', categoria: 'poupanca', valor, nota: nota || 'Transferido para Poupança', setor: 'produtos', dateKey: dk });
-    setMovimentosPoupanca((arr) => [...arr, { id: novoId(), tipo: 'deposito', valor, nota, timestamp: tx.timestamp, dateKey: dk, txId: tx.id }]);
+    setMovimentosPoupanca((arr) => [...arr, { id: novoId(), tipo: 'deposito', valor, nota, timestamp: tx.timestamp, dateKey: dk, txId: tx.id, metaId }]);
   }, [addTransacao, setMovimentosPoupanca]);
 
-  const retirarPoupanca = useCallback((valor, nota, dk = HOJE_KEY) => {
-    setMovimentosPoupanca((arr) => [...arr, { id: novoId(), tipo: 'retirada', valor, nota, timestamp: timestampParaDia(dk), dateKey: dk }]);
+  const retirarPoupanca = useCallback((valor, nota, dk = HOJE_KEY, metaId) => {
+    setMovimentosPoupanca((arr) => [...arr, { id: novoId(), tipo: 'retirada', valor, nota, timestamp: timestampParaDia(dk), dateKey: dk, metaId }]);
   }, [setMovimentosPoupanca]);
 
   const deleteMovimentoPoupanca = useCallback((id) => {
@@ -323,6 +341,16 @@ export function DataProvider({ children }) {
     }
     setMovimentosPoupanca((arr) => arr.filter((x) => x.id !== id));
   }, [movimentosPoupanca, setMovimentosPoupanca, setTransacoes]);
+
+  // Metas de poupança (nome + valor a atingir)
+  const metas = useMemo(() => saldoInicialMap.__metas || [], [saldoInicialMap]);
+  const addMeta = useCallback((nome, valor) => {
+    setSaldoInicialMap((m) => ({ ...m, __metas: [...(m.__metas || []), { id: novoId(), nome, valor }] }));
+  }, [setSaldoInicialMap]);
+  const deleteMeta = useCallback((id) => {
+    setSaldoInicialMap((m) => ({ ...m, __metas: (m.__metas || []).filter((x) => x.id !== id) }));
+    setMovimentosPoupanca((arr) => arr.map((x) => (x.metaId === id ? { ...x, metaId: undefined } : x)));
+  }, [setSaldoInicialMap, setMovimentosPoupanca]);
 
   const guardadoMesAtual = useMemo(() => {
     const mesAtual = mesAtualLabel(Date.now());
@@ -341,12 +369,12 @@ export function DataProvider({ children }) {
 
   const nomesClientesFiado = useMemo(() => [...new Set(fiados.map((f) => f.cliente))].sort(), [fiados]);
 
-  const registarRecebimentoFiado = useCallback((fiadoId, valor, categoria, nota) => {
+  const registarRecebimentoFiado = useCallback((fiadoId, valor, categoria, nota, metodo) => {
     const fiado = fiados.find((f) => f.id === fiadoId);
     if (!fiado) return;
     const custoProporcional = fiado.custoTotal ? Math.round((fiado.custoTotal * (valor / fiado.valorTotal)) * 100) / 100 : 0;
     addTransacao({
-      tipo: 'entrada', categoria, valor, nota, setor: 'produtos', // fiado é sempre venda de produtos
+      tipo: 'entrada', categoria, valor, nota, metodo, setor: 'produtos', // fiado é sempre venda de produtos
       produtoId: fiado.produtoStockId && custoProporcional > 0 ? fiado.produtoStockId : null,
       custoTotal: custoProporcional,
     });
@@ -355,7 +383,7 @@ export function DataProvider({ children }) {
       : f)));
   }, [fiados, addTransacao, setFiados]);
 
-  const salvarFiado = useCallback(({ cliente, produtoStockId, produtoDescricao, quantidade, valorTotal, valorPago, vencimento }) => {
+  const salvarFiado = useCallback(({ cliente, produtoStockId, produtoDescricao, quantidade, valorTotal, valorPago, vencimento, telefone }) => {
     let custoTotal = 0;
     if (produtoStockId) {
       const p = produtos.find((x) => x.id === produtoStockId);
@@ -366,7 +394,7 @@ export function DataProvider({ children }) {
     }
     const agora = Date.now();
     const fiado = {
-      id: novoId(), cliente, produto: produtoDescricao, produtoStockId: produtoStockId || null,
+      id: novoId(), cliente, telefone: telefone || '', produto: produtoDescricao, produtoStockId: produtoStockId || null,
       quantidade, custoTotal, valorTotal, valorPago: 0, vencimento, criadoEm: agora, pagamentos: [],
     };
     setFiados((arr) => [...arr, fiado]);
@@ -465,6 +493,7 @@ export function DataProvider({ children }) {
     pagouHoje, pagouDia, salvarParticipante, deleteParticipante, desmarcarPagamento, registrarPagamento,
     totalGuardadoXitique, registrarEntrega, deleteEntrega,
     totalPoupancaCalc, guardarPoupanca, retirarPoupanca, deleteMovimentoPoupanca, guardadoMesAtual,
+    metas, addMeta, deleteMeta, saldoPorMetodo,
     saldoFiado, statusFiado, nomesClientesFiado, salvarFiado, registarRecebimentoFiado, deleteFiado,
     salvarProduto, deleteProduto, reporProduto,
     computeAlertas, exportarBackup, importarBackup,

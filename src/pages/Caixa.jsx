@@ -7,7 +7,7 @@ import Modal from '../components/Modal';
 import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
 import AlertBanner from '../components/AlertBanner';
-import { useData } from '../context/DataContext';
+import { useData, METODOS } from '../context/DataContext';
 import { CATEGORIAS, CAT_LOOKUP } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataExtenso, formatHora, HOJE_KEY } from '../utils/format';
@@ -38,7 +38,7 @@ export default function Caixa() {
   const {
     doHoje, totalEntradasHoje, totalSaidasHoje, saldoHoje, totalProdutosHoje, totalMaquinaHoje, lucroRealHojeCalc,
     saldoProdutosHoje, saldoMaquinaHoje, totalEntradasSetorHoje, totalSaidasSetorHoje,
-    addTransacao, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias, saldoFechamentoDia, produtos,
+    addTransacao, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias, saldoFechamentoDia, produtos, saldoPorMetodo,
   } = useData();
   const { confirmar, avisar } = useDialog();
 
@@ -49,6 +49,7 @@ export default function Caixa() {
   const [valor, setValor] = useState('');
   const [nota, setNota] = useState('');
   const [produtoId, setProdutoId] = useState('');
+  const [metodo, setMetodo] = useState('dinheiro');
   const [qtdVenda, setQtdVenda] = useState('1');
   const [diaTransacao, setDiaTransacao] = useState(HOJE_KEY);
 
@@ -64,6 +65,7 @@ export default function Caixa() {
     setSetorTransacao(null);
     setValor('');
     setNota('');
+    setMetodo('dinheiro');
     setProdutoId('');
     setQtdVenda('1');
     setDiaTransacao(HOJE_KEY);
@@ -97,10 +99,10 @@ export default function Caixa() {
 
     if (categoria === 'venda' && produtoId) {
       const qtd = parseInt(qtdVenda) || 1;
-      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, produtoId, quantidade: qtd, dateKey: diaTransacao });
+      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, metodo, produtoId, quantidade: qtd, dateKey: diaTransacao });
       if (res.erro) { await avisar(res.erro); return; }
     } else {
-      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, dateKey: diaTransacao });
+      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, metodo, dateKey: diaTransacao });
     }
     setModalTipo(null);
   }
@@ -128,7 +130,7 @@ export default function Caixa() {
           const info = SETOR_INFO[setor];
           const saldoSetor = setor === 'produtos' ? saldoProdutosHoje : saldoMaquinaHoje;
           return (
-            <section key={setor} className="rounded-2xl bg-[var(--ink)] p-4 text-[var(--paper)]">
+            <section key={setor} className="cartao-azul rounded-2xl p-4 text-[var(--paper)]">
               <p className="text-xs font-medium uppercase tracking-wide text-[var(--paper)]/60">{info.icon} Saldo {info.label}</p>
               <p className="font-display mt-1 text-xl font-bold leading-none">
                 {formatMoney(saldoSetor)}
@@ -141,6 +143,15 @@ export default function Caixa() {
             </section>
           );
         })}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {METODOS.map((m) => (
+          <div key={m.id} className="rounded-2xl bg-[var(--paper)] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">{m.label}</p>
+            <p className="font-mono-ref mt-0.5 text-base font-bold text-[var(--ink)]">{formatMoney(saldoPorMetodo[m.id])} <span className="text-[10px] font-semibold text-[var(--ink-soft)]">MT</span></p>
+          </div>
+        ))}
       </div>
 
       <div className="mt-4 flex gap-3">
@@ -167,7 +178,7 @@ export default function Caixa() {
                       </span>
                     </div>
                     {t.nota && <div className="truncate text-[12px] text-[var(--ink-soft)]">{t.nota}</div>}
-                    <div className="text-[11px] text-[var(--ink-soft)]">{formatHora(t.timestamp)}</div>
+                    <div className="text-[11px] text-[var(--ink-soft)]">{formatHora(t.timestamp)} · {(METODOS.find((m) => m.id === t.metodo) || METODOS[0]).label}</div>
                   </div>
                   <div className={`font-mono-ref shrink-0 text-sm font-semibold ${t.tipo === 'entrada' ? 'text-[var(--teal)]' : 'text-[var(--brick)]'}`}>
                     {t.tipo === 'entrada' ? '+' : '−'} {formatMoney(t.valor)}
@@ -264,6 +275,11 @@ export default function Caixa() {
             </>
           )}
 
+          <Campo label="Método">
+            <select className="campo" value={metodo} onChange={(e) => setMetodo(e.target.value)}>
+              {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+            </select>
+          </Campo>
           <Campo label="Valor (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />
           </Campo>

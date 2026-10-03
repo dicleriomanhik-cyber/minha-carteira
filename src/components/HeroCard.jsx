@@ -2,7 +2,7 @@ import { formatMoney } from '../utils/format';
 
 export default function HeroCard({ label, valor, sub, children, acao }) {
   return (
-    <section className="rounded-2xl bg-[var(--ink)] p-5 text-[var(--paper)]">
+    <section className="cartao-azul rounded-2xl p-5 text-[var(--paper)]">
       {acao}
       <p className="text-xs font-medium uppercase tracking-wide text-[var(--paper)]/60">{label}</p>
       <p className="font-display mt-1 text-3xl font-bold leading-none">
