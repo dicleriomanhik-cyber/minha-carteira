@@ -1,6 +1,6 @@
 # Minha Carteira — Contexto completo do projecto
 
-> Documento para retomar o trabalho numa conversa nova com o Claude, sem perder nada. Última actualização: 3 de outubro de 2026 (passos 1 a 18 no GitHub; passo 19 entregue, por aplicar; ver secção 6).
+> Documento para retomar o trabalho numa conversa nova com o Claude, sem perder nada. Última actualização: 3 de outubro de 2026 (passos 1 a 18 no GitHub; passos 19 e 20 entregues, por aplicar; ver secção 6).
 > **O que enviar ao Claude novo:** (1) este ficheiro e (2) o zip do código actual, descarregado do GitHub (repositório `minha-carteira`, botão **Code > Download ZIP**). Não enviar zips antigos de passos, que ficam desactualizados (ver secção 9).
 
 ## 1. O que é
@@ -17,7 +17,7 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
 - `src/context/DataContext.jsx` — TODA a lógica de dados e regras (ver secção 4). `AuthContext.jsx` — sessão e perfil.
 - `src/pages/` — Caixa, Fiados, Produtos, Xitique, Despesas, Poupanca, Perfil, Login, Cadastro.
 - `src/components/` — Layout, Header (botão "Relatório"), BottomNav (menu de 6 abas), RelatorioModal, FechoDiaModal, LembretesModal, DossieModal, AlertBanner, Modal, Campo, Botao, HeroCard, SeletorDia, Icons (inclui `IconeWhatsApp`, `IconeFecho`, `IconeSino`), Footer, etc.
-- `src/utils/format.js` — formatação, datas, `semEmoji`. `src/utils/lembretes.js` — tipos de lembrete e cálculo da próxima data de pagamento (`proximaOcorrencia`). `src/utils/dossie.js` — `calcDossie` (números do dossiê de crédito). `src/utils/dossiePdf.js` — `criarDossiePdf` (desenha o PDF com jsPDF, carregado só ao gerar). `src/utils/whatsapp.js` — `linkWhatsApp(telefone, mensagem)` (wa.me, aceita números de Moçambique, junta 258). `src/utils/recibo.js` — `montarRecibo`, `criarReciboPdf` (jsPDF, A5), `criarReciboImagem` (canvas, PNG 1080 px), `valorPorExtenso`, `numeroRecibo`. `src/components/ReciboModal.jsx` — ecrã dos comprovativos. `src/utils/produtosLucro.js` — `rankingProdutos` (lucro por produto num período) e `sugerirPreco`. `src/components/ProdutosLucroModal.jsx` — ecrã "Produtos mais lucrativos". `src/utils/clientesFiado.js` — `chaveCliente`, `agruparClientes` (ficha por cliente), `verificarLimite`, `textoLimite`. `src/components/ClientesFiadoModal.jsx` (lista de clientes) e `FichaClienteModal.jsx` (ficha e limite). `src/utils/funcionarios.js` — `chaveNome`, `statusSalario`. `src/components/FuncionariosModal.jsx` — lista de funcionários com salário fixo. `src/utils/smsPagamento.js` — `lerSms(texto)` (lê SMS de dinheiro recebido) e `lerValor`. `src/components/SmsModal.jsx` — ecrã "Registar por SMS".
+- `src/utils/format.js` — formatação, datas, `semEmoji`. `src/utils/lembretes.js` — tipos de lembrete e cálculo da próxima data de pagamento (`proximaOcorrencia`). `src/utils/dossie.js` — `calcDossie` (números do dossiê de crédito). `src/utils/dossiePdf.js` — `criarDossiePdf` (desenha o PDF com jsPDF, carregado só ao gerar). `src/utils/whatsapp.js` — `linkWhatsApp(telefone, mensagem)` (wa.me, aceita números de Moçambique, junta 258). `src/utils/recibo.js` — `montarRecibo`, `criarReciboPdf` (jsPDF, A5), `criarReciboImagem` (canvas, PNG 1080 px), `valorPorExtenso`, `numeroRecibo`. `src/components/ReciboModal.jsx` — ecrã dos comprovativos. `src/utils/produtosLucro.js` — `rankingProdutos` (lucro por produto num período) e `sugerirPreco`. `src/components/ProdutosLucroModal.jsx` — ecrã "Produtos mais lucrativos". `src/utils/clientesFiado.js` — `chaveCliente`, `agruparClientes` (ficha por cliente), `verificarLimite`, `textoLimite`. `src/components/ClientesFiadoModal.jsx` (lista de clientes) e `FichaClienteModal.jsx` (ficha e limite). `src/utils/funcionarios.js` — `chaveNome`, `statusSalario`. `src/components/FuncionariosModal.jsx` — lista de funcionários com salário fixo. `src/utils/smsPagamento.js` — `lerSms(texto)` (lê SMS de dinheiro recebido) e `lerValor`. `src/components/SmsModal.jsx` — ecrã "Registar por SMS". `src/utils/metas.js` — `progressoMeta`, `chaveMes`. `src/components/MetaCard.jsx` — cartão da meta de vendas no Caixa.
 
 ## 4. Regras de negócio importantes
 - Dados guardados em `localStorage` e sincronizados (instantâneo JSON) para `dados_financeiros` no Supabase, um registo por utilizador. Chaves: transacoes, saldo_inicial, participantes, pagamentos, entregas, movimentos_poupanca, fiados, produtos. Metas da poupança e saldos iniciais ficam dentro de `saldo_inicial` (`__metas`, `__global`).
@@ -43,6 +43,8 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
 
 - **Registar vendas colando o SMS (passo 19):** no Caixa, botão "Registar por SMS" (por baixo de "+ Entrada / − Saída") abre `SmsModal`. O utilizador cola um SMS de dinheiro recebido, toca "Ler SMS" e a app mostra método, valor, dia, hora, quem enviou e referência; "Continuar" abre a Nova Entrada já preenchida (método, valor, dia, nota "De <remetente>"), e o utilizador escolhe a categoria e o setor e guarda (decisão do dono: confirmar sempre, nunca guardar logo). Só lê dinheiro **recebido**; SMS de pagamentos feitos ("Compraste", "Efectuou um pagamento", "O seu pagamento") são recusados com mensagem. Formatos reais confirmados com SMS do dono: **M-Pesa** ("Confirmado <CÓDIGO>. Recebeste 20.00MT de <número - nome> aos 24/9/26 as 2:54 PM..."), **e-Mola** ("ID Trans: <ID>. Recebeu 100.00MT de <número>, <nome> as 08:18:24 06/09/2026..."), **mKesh** em português ("Recebeu 10,00 MZN de <nome> (...) na sua conta mKesh a 2026-09-19 23:55:51... Referencia: <n>") e em inglês ("You received from <número> 000000001000 MZN at <data hora>. Transaction ID <n>"; o valor vem em centavos com zeros à esquerda). **O mKesh manda o mesmo pagamento nos dois idiomas**, por isso a referência é guardada na transacção (`referencia`, campo novo e opcional dentro de `transacoes`) e a app avisa "já foi registado" quando método + referência já existem (permite "Registar mesmo assim"). Regras: um SMS de cada vez (dois seguidos dão erro); só aceita SMS dos últimos 5 dias (mesmo limite do seletor de dias; mais antigo é recusado e regista-se à mão); data ilegível ou futura fica em hoje com aviso; o SMS é lido só no telemóvel, nada é enviado para fora. Sem alterações no SQL. Se os operadores mudarem o texto dos SMS, ajustar `smsPagamento.js` (a função está isolada e testável).
 
+- **Meta de vendas do mês (passo 20):** no Caixa, por cima de "+ Entrada / − Saída", o cartão `MetaCard`. Sem meta mostra o botão "Definir meta de vendas do mês"; com meta mostra barra de progresso, percentagem, "X de Y MT", quanto falta, dias que restam (hoje conta) e quanto dá por dia, e "acima/abaixo do ritmo" (ritmo = meta × dia do mês ÷ dias do mês). Tocar no cartão abre o ecrã para mudar ou remover a meta. "Vendas" é o mesmo número do Relatório ("Vendas e serviços (sem trocos)" = `calcResultado(...).receita`) para o mês actual. Decisões do dono: só meta de vendas (não de lucro), um valor único que fica igual todos os meses até ser mudado, e só aparece no Caixa (não no Relatório). Guardada em `saldo_inicial.__metaVendas` (número em MT), por isso sincroniza e entra no backup sem alterar o SQL. Sem alertas nem notificações da meta.
+
 ## 5. Regras de estilo pedidas pelo dono do projecto
 - Sem emojis na app, excepto no rodapé. Sem "Ex:" nos placeholders. Ícones em SVG. O botão do cabeçalho mostra o ícone + a palavra "Relatório".
 - Trabalhar **passo a passo**, um passo de cada vez, e **perguntar quando houver dúvida** antes de escrever código (o dono responde por botões de escolha ou por texto).
@@ -66,6 +68,7 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
 - Passo 16: produtos mais lucrativos e sugestor de preço.
 - Passo 17: ficha e limite de fiado por cliente.
 - Passo 18: funcionários com salário fixo, com aviso no Caixa no dia de pagar.
+- Passo 20: meta de vendas do mês com cartão no Caixa. Cálculo testado com dados de teste (meses de 28, 29, 30 e 31 dias, meta atingida, vendas negativas); código verificado com esbuild; falta o `npm run build` completo (ver passo 19) e testar no telemóvel.
 - Passo 19: registar vendas colando o SMS (M-Pesa, e-Mola, mKesh). Entregue em zip, por aplicar no GitHub. O leitor foi testado com os 6 SMS reais do dono (3 recebidos lidos, 3 de saída recusados); o código foi verificado com esbuild (sintaxe e bundle), mas o `npm run build` completo não correu na sessão (o `npm install` foi bloqueado com erro 403), por isso confirmar no Vercel.
 - **Lacuna:** os passos 1, 2, 10 e 11 não estão descritos neste ficheiro (foram feitos antes ou não ficaram registados). Se o dono se lembrar do que eram, acrescentar aqui.
 
@@ -83,17 +86,17 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
 8. Registar por SMS (passo 19): colar um SMS real de cada serviço recebido hoje, conferir valor/método/dia, guardar, e colar o mesmo outra vez para ver o aviso "já foi registado"; colar um SMS de pagamento feito para ver a recusa.
 
 **Outros pontos:**
-9. O rodapé (`Footer.jsx`) está vazio e o dono decidiu deixá-lo assim.
-10. Termos e condições são texto genérico; um jurista deve rever os pontos 8 (salários) e 10 (responsabilidade).
-11. O SQL de `supabase-setup.sql` não precisa de alterações: tudo o que foi acrescentado desde o passo 4 vai dentro de `saldo_inicial` (JSON) ou de `transacoes`.
-12. Limitações conhecidas e decididas: o cliente de um fiado e a pessoa de um salário identificam-se só pelo nome (sem distinguir maiúsculas/espaços; nomes iguais ficam juntos; mudar o nome quebra a ligação com pagamentos antigos); as unidades do ranking de produtos só contam vendas a pronto; lembretes e salários só contam o período actual (um mês anterior não pago é esquecido); a diferença do fecho do dia não cria movimento no Caixa; o limite de fiado é só por cliente (sem limite geral) e só avisa, não bloqueia.
+9. Meta de vendas (passo 20): definir uma meta, ver a barra subir ao registar uma venda, mudar e remover a meta, e ver que no dia 1 do mês seguinte o progresso volta a zero com a mesma meta.
+10. O rodapé (`Footer.jsx`) está vazio e o dono decidiu deixá-lo assim.
+11. Termos e condições são texto genérico; um jurista deve rever os pontos 8 (salários) e 10 (responsabilidade).
+12. O SQL de `supabase-setup.sql` não precisa de alterações: tudo o que foi acrescentado desde o passo 4 vai dentro de `saldo_inicial` (JSON) ou de `transacoes`.
+13. Limitações conhecidas e decididas: o cliente de um fiado e a pessoa de um salário identificam-se só pelo nome (sem distinguir maiúsculas/espaços; nomes iguais ficam juntos; mudar o nome quebra a ligação com pagamentos antigos); as unidades do ranking de produtos só contam vendas a pronto; lembretes e salários só contam o período actual (um mês anterior não pago é esquecido); a diferença do fecho do dia não cria movimento no Caixa; o limite de fiado é só por cliente (sem limite geral) e só avisa, não bloqueia.
 
 ## 8. O que falta fazer (roadmap), por ordem sugerida
 1. **Funcionários com acesso limitado** (registar vendas sem ver lucros nem poupança) — o item mais pesado: exige perfis e permissões (Supabase auth, regras de acesso aos dados, convites). Fazer em partes: (a) desenho e tabelas de perfis/papéis; (b) convite e login do funcionário; (c) ecrãs restritos (só Caixa e Stock); (d) regras de segurança no Supabase. Perguntar ao dono antes de começar.
-2. **Metas do negócio** (por exemplo vender X no mês, com progresso no Caixa).
-3. **Vários negócios na mesma conta.**
-4. **Dicas curtas de gestão** dentro da app.
-5. **Evoluções pequenas já pensadas:**
+2. **Vários negócios na mesma conta.**
+3. **Dicas curtas de gestão** dentro da app.
+4. **Evoluções pequenas já pensadas:**
    - Cartão de lucro do mês no ecrã do Caixa, e gráficos no Relatório.
    - Fecho do dia: registar a diferença como ajuste no Caixa; aviso por notificação ou WhatsApp.
    - Lembretes: avisos de meses anteriores em atraso.
@@ -101,6 +104,7 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
    - Comprovativos: comprovativo de fiado recebido; assinatura/carimbo do dono.
    - Funcionários: guardar WhatsApp (o dono decidiu não guardar por agora) e enviar o comprovativo directo.
    - Fiados: limite geral para todos os clientes, e distinguir dois clientes com o mesmo nome.
+   - Metas: meta de lucro, meta diferente por mês, aviso no Caixa quando a meta é atingida ou o mês está atrasado, e mostrar a meta no Relatório mensal.
    - SMS: ler também pagamentos feitos (como Saída), colar vários SMS de uma vez, e aceitar SMS mais antigos que 5 dias.
    - Opcional técnico: dividir o código em partes (code-split) para reduzir o aviso de tamanho do build.
 
@@ -114,5 +118,5 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
 
 ## 10. Como retomar numa conversa nova
 1. Anexar este ficheiro e o zip do GitHub (`minha-carteira-main.zip`, sem `.env`).
-2. Dizer: "Continuamos o Minha Carteira. Lê o CONTEXTO-PROJECTO.md, confirma no zip que os passos 1 a 18 estão lá, trabalha passo a passo e pergunta quando tiveres dúvidas. Próximo passo: <o que queres>."
+2. Dizer: "Continuamos o Minha Carteira. Lê o CONTEXTO-PROJECTO.md, confirma no zip que os passos 1 a 20 estão lá, trabalha passo a passo e pergunta quando tiveres dúvidas. Próximo passo: <o que queres>."
 3. O Claude deve começar por verificar o zip (existência dos ficheiros da secção 9) e correr `npm install && npm run build` antes de propor mudanças.

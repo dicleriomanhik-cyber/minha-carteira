@@ -318,6 +318,15 @@ export function DataProvider({ children }) {
     setSaldoInicialMap((m) => ({ ...m, __funcionarios: (m.__funcionarios || []).filter((x) => x.id !== id) }));
   }, [setSaldoInicialMap]);
 
+  // Meta de vendas do mês (MT), igual em todos os meses até ser mudada. Guardada dentro de saldo_inicial (__metaVendas), por isso sincroniza sem alterar o SQL.
+  const metaVendas = useMemo(() => saldoInicialMap.__metaVendas || 0, [saldoInicialMap]);
+  const definirMetaVendas = useCallback((valor) => {
+    setSaldoInicialMap((m) => {
+      const { __metaVendas, ...resto } = m;
+      return valor && valor > 0 ? { ...resto, __metaVendas: Math.round(valor * 100) / 100 } : resto;
+    });
+  }, [setSaldoInicialMap]);
+
   const nomesPagos = useMemo(() => [...new Set(transacoes.filter((t) => t.categoria === 'salario_func' && t.pessoa).map((t) => t.pessoa))].sort(), [transacoes]);
 
   const deleteTransacao = useCallback((id) => {
@@ -693,7 +702,7 @@ export function DataProvider({ children }) {
     saldoFechamentoDiaSetor, precisaMigrarSaldoInicialHoje, saldoInicialLegadoHoje,
     saldoProdutosHoje, saldoMaquinaHoje, totalEntradasSetorHoje, totalSaidasSetorHoje,
     doHoje, totalEntradasHoje, totalSaidasHoje, saldoHoje, totalProdutosHoje, totalMaquinaHoje, lucroRealHojeCalc,
-    addTransacao, registarDespesa, nomesPagos, funcionarios, salvarFuncionario, deleteFuncionario, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias,
+    addTransacao, registarDespesa, nomesPagos, metaVendas, definirMetaVendas, funcionarios, salvarFuncionario, deleteFuncionario, registrarVendaComStock, deleteTransacao, deleteDia, historicoDias,
     pagouHoje, pagouDia, salvarParticipante, deleteParticipante, desmarcarPagamento, registrarPagamento,
     totalGuardadoXitique, registrarEntrega, deleteEntrega,
     totalPoupancaCalc, guardarPoupanca, depositosSemSaida, descontarDepositosAntigos, retirarPoupanca, deleteMovimentoPoupanca, guardadoMesAtual,

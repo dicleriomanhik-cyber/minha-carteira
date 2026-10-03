@@ -12,6 +12,7 @@ import AlertBanner from '../components/AlertBanner';
 import FechoDiaModal from '../components/FechoDiaModal';
 import LembretesModal from '../components/LembretesModal';
 import SmsModal from '../components/SmsModal';
+import MetaCard from '../components/MetaCard';
 import { IconeFecho, IconeSino, IconeSms } from '../components/Icons';
 import { useData, METODOS } from '../context/DataContext';
 import { CATEGORIAS, CAT_LOOKUP } from '../context/DataContext';
@@ -175,6 +176,8 @@ export default function Caixa() {
           </div>
         ))}
       </div>
+
+      <MetaCard />
 
       <div className="mt-4 flex gap-3">
         <button onClick={() => abrirModal('entrada')} className="flex-1 rounded-xl bg-[var(--teal)] py-3 text-sm font-semibold text-white active:scale-[0.98]">+ Entrada</button>
