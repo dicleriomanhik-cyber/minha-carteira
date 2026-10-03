@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
+import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { IconeWhatsApp } from '../components/Icons';
@@ -350,9 +351,7 @@ export default function Fiados() {
 
           {parseFloat(campos.valorPago) > 0 && (
             <Campo label="Sinal recebido em">
-              <select className="campo" value={metodoSinal} onChange={(e) => setMetodoSinal(e.target.value)}>
-                {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-              </select>
+              <SeletorMetodo value={metodoSinal} onChange={setMetodoSinal} />
             </Campo>
           )}
 
@@ -375,9 +374,7 @@ export default function Fiados() {
               {fReceber.cliente} deve {formatMoney(saldoFiado(fReceber))} MT ({fReceber.produto}).
             </p>
             <Campo label="Recebido em">
-              <select className="campo" value={metodoReceber} onChange={(e) => setMetodoReceber(e.target.value)}>
-                {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-              </select>
+              <SeletorMetodo value={metodoReceber} onChange={setMetodoReceber} />
             </Campo>
             <Campo label="Valor Recebido (MT)">
               <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valorReceber} onChange={(e) => setValorReceber(e.target.value)} />

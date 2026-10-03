@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
+import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
@@ -260,9 +261,7 @@ export default function Poupanca() {
             </select>
           </Campo>
           <Campo label="Sai de">
-            <select className="campo" value={metodoGuardar} onChange={(e) => setMetodoGuardar(e.target.value)}>
-              {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label} ({formatMoney(saldoPorMetodo[m.id] || 0)} MT)</option>)}
-            </select>
+            <SeletorMetodo value={metodoGuardar} onChange={setMetodoGuardar} saldo />
           </Campo>
           <Campo label="Meta (opcional)">
             <select className="campo" value={metaGuardar} onChange={(e) => setMetaGuardar(e.target.value)}>

@@ -3,6 +3,8 @@ import Layout from '../components/Layout';
 import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
+import MetodoLogo from '../components/MetodoLogo';
+import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
@@ -148,8 +150,8 @@ export default function Caixa() {
       <div className="mt-3 grid grid-cols-2 gap-3">
         {METODOS.map((m) => (
           <div key={m.id} className="rounded-2xl bg-[var(--paper)] p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">{m.label}</p>
-            <p className="font-mono-ref mt-0.5 text-base font-bold text-[var(--ink)]">{formatMoney(saldoPorMetodo[m.id])} <span className="text-[10px] font-semibold text-[var(--ink-soft)]">MT</span></p>
+            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]"><MetodoLogo id={m.id} className="h-6 w-6" />{m.label}</p>
+            <p className="font-mono-ref mt-1.5 text-base font-bold text-[var(--ink)]">{formatMoney(saldoPorMetodo[m.id])} <span className="text-[10px] font-semibold text-[var(--ink-soft)]">MT</span></p>
           </div>
         ))}
       </div>
@@ -178,7 +180,7 @@ export default function Caixa() {
                       </span>
                     </div>
                     {t.nota && <div className="truncate text-[12px] text-[var(--ink-soft)]">{t.nota}</div>}
-                    <div className="text-[11px] text-[var(--ink-soft)]">{formatHora(t.timestamp)} · {(METODOS.find((m) => m.id === t.metodo) || METODOS[0]).label}</div>
+                    <div className="text-[11px] text-[var(--ink-soft)]">{formatHora(t.timestamp)} · <MetodoLogo id={(METODOS.find((m) => m.id === t.metodo) || METODOS[0]).id} className="inline-block h-3.5 w-3.5 align-[-2px]" /> {(METODOS.find((m) => m.id === t.metodo) || METODOS[0]).label}</div>
                   </div>
                   <div className={`font-mono-ref shrink-0 text-sm font-semibold ${t.tipo === 'entrada' ? 'text-[var(--teal)]' : 'text-[var(--brick)]'}`}>
                     {t.tipo === 'entrada' ? '+' : '−'} {formatMoney(t.valor)}
@@ -276,9 +278,7 @@ export default function Caixa() {
           )}
 
           <Campo label="Método">
-            <select className="campo" value={metodo} onChange={(e) => setMetodo(e.target.value)}>
-              {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </select>
+            <SeletorMetodo value={metodo} onChange={setMetodo} />
           </Campo>
           <Campo label="Valor (MT)">
             <input className="campo" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />

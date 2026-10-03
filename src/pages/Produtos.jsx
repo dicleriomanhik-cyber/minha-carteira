@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
+import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import Linha from '../components/Linha';
@@ -235,9 +236,7 @@ export default function Produtos() {
             </Campo>
             {vModo === 'pronto' && (
               <Campo label="Recebido em">
-                <select className="campo" value={vMetodo} onChange={(e) => setVMetodo(e.target.value)}>
-              {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </select>
+                <SeletorMetodo value={vMetodo} onChange={setVMetodo} />
               </Campo>
             )}
             {vModo === 'fiado' && (

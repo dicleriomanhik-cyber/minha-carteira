@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import HeroCard from '../components/HeroCard';
 import Botao from '../components/Botao';
 import Campo from '../components/Campo';
+import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import SeletorDia from '../components/SeletorDia';
 import EmptyState from '../components/EmptyState';
@@ -153,9 +154,7 @@ export default function Despesas() {
             </select>
           </Campo>
           <Campo label="Pago por">
-            <select className="campo" value={metodo} onChange={(e) => setMetodo(e.target.value)}>
-              {METODOS.map((m) => <option key={m.id} value={m.id}>{m.label} ({formatMoney(saldoPorMetodo[m.id] || 0)} MT)</option>)}
-            </select>
+            <SeletorMetodo value={metodo} onChange={setMetodo} saldo />
           </Campo>
           <Campo label="Nota (opcional)">
             <input className="campo" maxLength={40} placeholder="" value={nota} onChange={(e) => setNota(e.target.value)} />
