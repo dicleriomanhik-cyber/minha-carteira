@@ -269,22 +269,23 @@ export function DataProvider({ children }) {
     return { receita, custo, lucro: receita - custo };
   }, [transacoes]);
 
-  const addTransacao = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId = null, quantidade = null, custoTotal = 0, metodo = 'dinheiro', dateKey: dk = HOJE_KEY, pessoa = null }) => {
+  const addTransacao = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId = null, quantidade = null, custoTotal = 0, metodo = 'dinheiro', dateKey: dk = HOJE_KEY, pessoa = null, referencia = null }) => {
     const tx = { id: novoId(), tipo, categoria, valor, nota, setor, metodo, timestamp: timestampParaDia(dk), dateKey: dk };
     if (pessoa) tx.pessoa = pessoa;
+    if (referencia) tx.referencia = referencia; // referência do SMS de M-Pesa/e-Mola/mKesh, para não registar o mesmo pagamento duas vezes
     if (produtoId) { tx.produtoId = produtoId; tx.quantidade = quantidade; tx.custoTotal = custoTotal; }
     setTransacoes((arr) => [...arr, tx]);
     return tx;
   }, [setTransacoes]);
 
-  const registrarVendaComStock = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId, quantidade, metodo, dateKey: dk = HOJE_KEY }) => {
+  const registrarVendaComStock = useCallback(({ tipo, categoria, valor, nota, setor = 'produtos', produtoId, quantidade, metodo, dateKey: dk = HOJE_KEY, referencia = null }) => {
     const p = produtos.find((x) => x.id === produtoId);
     if (!p) return { erro: 'Esse produto já não existe no stock.' };
     if (quantidade > p.quantidade) return { erro: `Só tens ${p.quantidade} unidades de "${p.nome}" em stock.` };
     const custoTotal = quantidade * p.precoCusto;
     setProdutos((arr) => arr.map((x) => (x.id === produtoId ? { ...x, quantidade: x.quantidade - quantidade } : x)));
     const notaFinal = nota ? `${p.nome} x${quantidade} · ${nota}` : `${p.nome} x${quantidade}`;
-    addTransacao({ tipo, categoria, valor, nota: notaFinal, setor, metodo, produtoId, quantidade, custoTotal, dateKey: dk });
+    addTransacao({ tipo, categoria, valor, nota: notaFinal, setor, metodo, produtoId, quantidade, custoTotal, dateKey: dk, referencia });
     return { ok: true };
   }, [produtos, setProdutos, addTransacao]);
 

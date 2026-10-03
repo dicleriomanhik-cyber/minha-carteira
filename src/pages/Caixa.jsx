@@ -11,7 +11,8 @@ import EmptyState from '../components/EmptyState';
 import AlertBanner from '../components/AlertBanner';
 import FechoDiaModal from '../components/FechoDiaModal';
 import LembretesModal from '../components/LembretesModal';
-import { IconeFecho, IconeSino } from '../components/Icons';
+import SmsModal from '../components/SmsModal';
+import { IconeFecho, IconeSino, IconeSms } from '../components/Icons';
 import { useData, METODOS } from '../context/DataContext';
 import { CATEGORIAS, CAT_LOOKUP } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
@@ -50,6 +51,8 @@ export default function Caixa() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [fechoAberto, setFechoAberto] = useState(false);
   const [lembretesAberto, setLembretesAberto] = useState(false);
+  const [smsAberto, setSmsAberto] = useState(false);
+  const [refSms, setRefSms] = useState(null); // { referencia, metodo } quando a entrada vem de um SMS
   const [modalTipo, setModalTipo] = useState(null); // 'entrada' | 'saida' | null
   const [categoria, setCategoria] = useState(null);
   const [setorTransacao, setSetorTransacao] = useState(null);
@@ -76,6 +79,18 @@ export default function Caixa() {
     setProdutoId('');
     setQtdVenda('1');
     setDiaTransacao(HOJE_KEY);
+    setRefSms(null);
+  }
+
+  // Depois de ler o SMS, abre a Nova Entrada já preenchida; a categoria e o setor ficam para o utilizador escolher.
+  function aoConfirmarSms(r) {
+    setSmsAberto(false);
+    abrirModal('entrada');
+    setMetodo(r.metodo);
+    setValor(String(r.valor));
+    setDiaTransacao(r.dateKey || HOJE_KEY);
+    setNota(r.de ? `De ${r.de}`.slice(0, 40) : '');
+    setRefSms(r.referencia ? { referencia: r.referencia, metodo: r.metodo } : null);
   }
 
   function onSelecionarCategoria(c) {
@@ -106,10 +121,10 @@ export default function Caixa() {
 
     if (categoria === 'venda' && produtoId) {
       const qtd = parseInt(qtdVenda) || 1;
-      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, metodo, produtoId, quantidade: qtd, dateKey: diaTransacao });
+      const res = registrarVendaComStock({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, metodo, produtoId, quantidade: qtd, dateKey: diaTransacao, referencia: refSms?.referencia || null });
       if (res.erro) { await avisar(res.erro); return; }
     } else {
-      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, metodo, dateKey: diaTransacao });
+      addTransacao({ tipo: modalTipo, categoria, valor: v, nota: nota.trim(), setor: setorEfetivo, metodo, dateKey: diaTransacao, referencia: refSms?.referencia || null });
     }
     setModalTipo(null);
   }
@@ -165,6 +180,10 @@ export default function Caixa() {
         <button onClick={() => abrirModal('entrada')} className="flex-1 rounded-xl bg-[var(--teal)] py-3 text-sm font-semibold text-white active:scale-[0.98]">+ Entrada</button>
         <button onClick={() => abrirModal('saida')} className="flex-1 rounded-xl bg-[var(--brick)] py-3 text-sm font-semibold text-white active:scale-[0.98]">− Saída</button>
       </div>
+
+      <button onClick={() => setSmsAberto(true)} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--paper)] py-3 text-[13px] font-semibold text-[var(--ink)] active:scale-[0.98]">
+        <IconeSms className="h-5 w-5 text-[var(--mango)]" />Registar por SMS
+      </button>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <button onClick={() => setFechoAberto(true)} className="flex items-center justify-center gap-2 rounded-xl bg-[var(--paper)] py-3 text-[13px] font-semibold text-[var(--ink)] active:scale-[0.98]">
@@ -237,6 +256,11 @@ export default function Caixa() {
       {/* Modal Nova Transação */}
       <Modal titulo={modalTipo === 'entrada' ? 'Nova Entrada' : 'Nova Saída'} aberto={!!modalTipo} aoFechar={() => setModalTipo(null)}>
         <div className="space-y-4">
+          {refSms && (
+            <p className="rounded-xl bg-[var(--bg-soft)] p-3 text-xs text-[var(--ink-soft)]">
+              Valor, método e dia lidos do SMS. Escolhe a categoria, confirma tudo e guarda.
+            </p>
+          )}
           <Campo label="Dia">
             <SeletorDia value={diaTransacao} onChange={setDiaTransacao} />
             {diaTransacao !== HOJE_KEY && (
@@ -308,6 +332,7 @@ export default function Caixa() {
         </div>
       </Modal>
 
+      <SmsModal aberto={smsAberto} aoFechar={() => setSmsAberto(false)} aoConfirmar={aoConfirmarSms} />
       <FechoDiaModal aberto={fechoAberto} aoFechar={() => setFechoAberto(false)} />
       <LembretesModal aberto={lembretesAberto} aoFechar={() => setLembretesAberto(false)} />
     </Layout>

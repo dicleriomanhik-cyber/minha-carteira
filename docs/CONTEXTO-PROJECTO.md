@@ -1,6 +1,7 @@
 # Minha Carteira — Contexto completo do projecto
 
-> Cola este ficheiro no início de uma conversa nova com o Claude, junto com o zip `Carteira-completo.zip`, para continuar o trabalho sem perder nada.
+> Documento para retomar o trabalho numa conversa nova com o Claude, sem perder nada. Última actualização: 3 de outubro de 2026 (passos 1 a 18 no GitHub; passo 19 entregue, por aplicar; ver secção 6).
+> **O que enviar ao Claude novo:** (1) este ficheiro e (2) o zip do código actual, descarregado do GitHub (repositório `minha-carteira`, botão **Code > Download ZIP**). Não enviar zips antigos de passos, que ficam desactualizados (ver secção 9).
 
 ## 1. O que é
 App web (PWA) para pequenos negócios em Moçambique. Objectivo: ajudar o pequeno comerciante a organizar o dinheiro, crescer e tornar-se um grande empreendedor/empresário. Quer-se que a app seja **indispensável** no dia a dia do dono.
@@ -9,14 +10,14 @@ App web (PWA) para pequenos negócios em Moçambique. Objectivo: ajudar o pequen
 - Moeda: MT (Metical). Idioma: português de Moçambique, tratamento por "tu".
 
 ## 2. Stack
-React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossiê em PDF); Supabase (auth, tabela `profiles`, tabela `dados_financeiros`, bucket `avatars`). Variáveis de ambiente (ficheiro `.env`, NÃO está no zip): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. SQL de configuração: `supabase-setup.sql`.
+React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossiê em PDF); Supabase (auth, tabela `profiles`, tabela `dados_financeiros`, bucket `avatars`). Variáveis de ambiente (ficheiro `.env`, NUNCA enviar para o GitHub nem partilhar; está no `.gitignore`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. SQL de configuração: `supabase-setup.sql`.
 
 ## 3. Estrutura
 - `src/App.jsx` — rotas: `/` Caixa, `/fiados`, `/produtos` (Stock), `/xitique`, `/despesas`, `/poupanca`, `/perfil`.
 - `src/context/DataContext.jsx` — TODA a lógica de dados e regras (ver secção 4). `AuthContext.jsx` — sessão e perfil.
 - `src/pages/` — Caixa, Fiados, Produtos, Xitique, Despesas, Poupanca, Perfil, Login, Cadastro.
 - `src/components/` — Layout, Header (botão "Relatório"), BottomNav (menu de 6 abas), RelatorioModal, FechoDiaModal, LembretesModal, DossieModal, AlertBanner, Modal, Campo, Botao, HeroCard, SeletorDia, Icons (inclui `IconeWhatsApp`, `IconeFecho`, `IconeSino`), Footer, etc.
-- `src/utils/format.js` — formatação, datas, `semEmoji`. `src/utils/lembretes.js` — tipos de lembrete e cálculo da próxima data de pagamento (`proximaOcorrencia`). `src/utils/dossie.js` — `calcDossie` (números do dossiê de crédito). `src/utils/dossiePdf.js` — `criarDossiePdf` (desenha o PDF com jsPDF, carregado só ao gerar). `src/utils/whatsapp.js` — `linkWhatsApp(telefone, mensagem)` (wa.me, aceita números de Moçambique, junta 258). `src/utils/recibo.js` — `montarRecibo`, `criarReciboPdf` (jsPDF, A5), `criarReciboImagem` (canvas, PNG 1080 px), `valorPorExtenso`, `numeroRecibo`. `src/components/ReciboModal.jsx` — ecrã dos comprovativos. `src/utils/produtosLucro.js` — `rankingProdutos` (lucro por produto num período) e `sugerirPreco`. `src/components/ProdutosLucroModal.jsx` — ecrã "Produtos mais lucrativos". `src/utils/clientesFiado.js` — `chaveCliente`, `agruparClientes` (ficha por cliente), `verificarLimite`, `textoLimite`. `src/components/ClientesFiadoModal.jsx` (lista de clientes) e `FichaClienteModal.jsx` (ficha e limite). `src/utils/funcionarios.js` — `chaveNome`, `statusSalario`. `src/components/FuncionariosModal.jsx` — lista de funcionários com salário fixo.
+- `src/utils/format.js` — formatação, datas, `semEmoji`. `src/utils/lembretes.js` — tipos de lembrete e cálculo da próxima data de pagamento (`proximaOcorrencia`). `src/utils/dossie.js` — `calcDossie` (números do dossiê de crédito). `src/utils/dossiePdf.js` — `criarDossiePdf` (desenha o PDF com jsPDF, carregado só ao gerar). `src/utils/whatsapp.js` — `linkWhatsApp(telefone, mensagem)` (wa.me, aceita números de Moçambique, junta 258). `src/utils/recibo.js` — `montarRecibo`, `criarReciboPdf` (jsPDF, A5), `criarReciboImagem` (canvas, PNG 1080 px), `valorPorExtenso`, `numeroRecibo`. `src/components/ReciboModal.jsx` — ecrã dos comprovativos. `src/utils/produtosLucro.js` — `rankingProdutos` (lucro por produto num período) e `sugerirPreco`. `src/components/ProdutosLucroModal.jsx` — ecrã "Produtos mais lucrativos". `src/utils/clientesFiado.js` — `chaveCliente`, `agruparClientes` (ficha por cliente), `verificarLimite`, `textoLimite`. `src/components/ClientesFiadoModal.jsx` (lista de clientes) e `FichaClienteModal.jsx` (ficha e limite). `src/utils/funcionarios.js` — `chaveNome`, `statusSalario`. `src/components/FuncionariosModal.jsx` — lista de funcionários com salário fixo. `src/utils/smsPagamento.js` — `lerSms(texto)` (lê SMS de dinheiro recebido) e `lerValor`. `src/components/SmsModal.jsx` — ecrã "Registar por SMS".
 
 ## 4. Regras de negócio importantes
 - Dados guardados em `localStorage` e sincronizados (instantâneo JSON) para `dados_financeiros` no Supabase, um registo por utilizador. Chaves: transacoes, saldo_inicial, participantes, pagamentos, entregas, movimentos_poupanca, fiados, produtos. Metas da poupança e saldos iniciais ficam dentro de `saldo_inicial` (`__metas`, `__global`).
@@ -24,7 +25,7 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
 - Todas as saídas/entradas são `transacoes` (tipo, categoria, valor, setor produtos|maquina, metodo dinheiro|mpesa|emola|mkesh, dateKey). O saldo por método também é controlado.
 - **Poupança:** guardar cria uma saída no Caixa (categoria `poupanca`, ligada por `txId`) + movimento na Poupança; sai do saldo total. Retirar NÃO devolve ao Caixa (só fica o registo). Apagar um depósito devolve o dinheiro ao Caixa. Existe migração de depósitos antigos sem saída.
 - **Fiados:** cliente, produto/serviço, valor, vencimento, telefone, pagamentos parciais, aumentos de dívida, edição (valor, produto, vencimento, telefone). Recebimentos entram no Caixa na data em que são recebidos. O relatório mostra "Fiados feitos" e "Fiados pagos" (data em que a dívida foi feita e em que foi paga). Botão "Lembrar" abre o WhatsApp com mensagem pronta.
-- **Despesas (passo 4):** grupos Salários (Meu salário; Salário de funcionário com nome da pessoa), Administrativas, Comerciais e Vendas, Tecnologia e Ferramentas, Financeiras, Legais e Regulatórias (definidos em `DESPESA_GRUPOS`). Cada pagamento é uma saída (`registarDespesa`), sai do saldo total e aparece na secção "Salários e Despesas" do relatório. Decisão tomada: registar cada pagamento com o nome (sugestões de nomes já pagos); NÃO há lista de funcionários com salário fixo (pode vir depois).
+- **Despesas (passo 4):** grupos Salários (Meu salário; Salário de funcionário com nome da pessoa), Administrativas, Comerciais e Vendas, Tecnologia e Ferramentas, Financeiras, Legais e Regulatórias (definidos em `DESPESA_GRUPOS`). Cada pagamento é uma saída (`registarDespesa`), sai do saldo total e aparece na secção "Salários e Despesas" do relatório. Cada pagamento regista-se com o nome da pessoa (sugestões de nomes já pagos). A lista de funcionários com salário fixo veio depois (passo 18).
 - Stock: venda ligada ao produto desconta quantidade e calcula lucro real (custo vs receita).
 - **Alertas, Fecho do dia e Lembretes (passo 13):** `computeAlertas` (DataContext) devolve avisos de fiados vencidos / a vencer hoje / amanhã, stock baixo, lembretes de pagamentos (dentro do prazo de aviso) e "fecho por fazer" (depois das 17h, com registos hoje e sem fecho). O `AlertBanner` do Caixa abre o ecrã certo (fiados, stock, modal de lembretes ou modal do fecho). Os botões "Fecho do dia" e "Lembretes" estão no Caixa, por baixo de "+ Entrada / − Saída".
   - **Fecho do dia:** resumo de hoje (entradas, saídas, lucro real, saldo total, fiados recebidos), conferência do dinheiro contado vs saldo da app em cada método (dinheiro, M-Pesa, e-Mola, mKesh) com "Certo / Sobram / Faltam", lista de avisos e últimos 5 fechos. Guardado em `saldo_inicial.__fechos[dateKey]` = `{contado, esperado, diferenca, timestamp}`. A diferença NÃO cria movimento no Caixa (só fica registada).
@@ -40,36 +41,78 @@ React 19 + Vite 8 + React Router 7 + Tailwind 4 + vite-plugin-pwa; jsPDF (dossi�
 
 - **Funcionários com salário fixo (passo 18):** na aba Despesas, botão "Funcionários e salários" abre `FuncionariosModal`. Cada funcionário tem nome, salário fixo (MT) e dia do mês em que se paga (1 a 31; dia 31 em meses mais curtos conta como o último dia). Guardados em `saldo_inicial.__funcionarios` (`{id, nome, salario, dia}`), por isso sincronizam e entram no backup sem alterar o SQL. Não se guarda WhatsApp (decisão do dono). O estado do mês actual (`statusSalario`) soma os pagamentos `salario_func` do mês com o mesmo nome (sem distinguir maiúsculas/espaços): "Pago", "Falta pagar" (pagamento parcial), "Por pagar" ou "Ainda não é dia". Só o mês actual conta; um mês anterior por pagar não aparece. "Pagar" fecha a lista e abre o formulário "Registar pagamento" já preenchido (salário de funcionário, nome, valor que falta, hoje), com as mesmas validações de saldo da aba Despesas; ao escrever no formulário o nome de um funcionário da lista com o valor vazio, o valor que falta é preenchido sozinho. Aviso no Caixa (`computeAlertas`, tipo `salario`): a partir do dia de pagamento e até o salário estar pago, um aviso por funcionário se for só um, ou um aviso agrupado se forem vários; tocar leva a Despesas com a lista de funcionários aberta. Mudar o nome de um funcionário faz os pagamentos antigos deixarem de contar para o mês. Tirar um funcionário da lista não apaga pagamentos.
 
+- **Registar vendas colando o SMS (passo 19):** no Caixa, botão "Registar por SMS" (por baixo de "+ Entrada / − Saída") abre `SmsModal`. O utilizador cola um SMS de dinheiro recebido, toca "Ler SMS" e a app mostra método, valor, dia, hora, quem enviou e referência; "Continuar" abre a Nova Entrada já preenchida (método, valor, dia, nota "De <remetente>"), e o utilizador escolhe a categoria e o setor e guarda (decisão do dono: confirmar sempre, nunca guardar logo). Só lê dinheiro **recebido**; SMS de pagamentos feitos ("Compraste", "Efectuou um pagamento", "O seu pagamento") são recusados com mensagem. Formatos reais confirmados com SMS do dono: **M-Pesa** ("Confirmado <CÓDIGO>. Recebeste 20.00MT de <número - nome> aos 24/9/26 as 2:54 PM..."), **e-Mola** ("ID Trans: <ID>. Recebeu 100.00MT de <número>, <nome> as 08:18:24 06/09/2026..."), **mKesh** em português ("Recebeu 10,00 MZN de <nome> (...) na sua conta mKesh a 2026-09-19 23:55:51... Referencia: <n>") e em inglês ("You received from <número> 000000001000 MZN at <data hora>. Transaction ID <n>"; o valor vem em centavos com zeros à esquerda). **O mKesh manda o mesmo pagamento nos dois idiomas**, por isso a referência é guardada na transacção (`referencia`, campo novo e opcional dentro de `transacoes`) e a app avisa "já foi registado" quando método + referência já existem (permite "Registar mesmo assim"). Regras: um SMS de cada vez (dois seguidos dão erro); só aceita SMS dos últimos 5 dias (mesmo limite do seletor de dias; mais antigo é recusado e regista-se à mão); data ilegível ou futura fica em hoje com aviso; o SMS é lido só no telemóvel, nada é enviado para fora. Sem alterações no SQL. Se os operadores mudarem o texto dos SMS, ajustar `smsPagamento.js` (a função está isolada e testável).
+
 ## 5. Regras de estilo pedidas pelo dono do projecto
 - Sem emojis na app, excepto no rodapé. Sem "Ex:" nos placeholders. Ícones em SVG. O botão do cabeçalho mostra o ícone + a palavra "Relatório".
-- Trabalhar **passo a passo**, um passo de cada vez, e perguntar quando houver dúvida. Entregar zips só com os ficheiros alterados (estrutura `src/...`) para extrair por cima do projecto.
-- Português de Moçambique, tom simples e directo.
+- Trabalhar **passo a passo**, um passo de cada vez, e **perguntar quando houver dúvida** antes de escrever código (o dono responde por botões de escolha ou por texto).
+- Português de Moçambique, tom simples e directo, tratamento por "tu" dentro da app.
+- Cada entrega é um zip só com os ficheiros alterados, **com `src/...` e `docs/...` logo na raiz do zip** (sem pasta extra à volta), para extrair por cima do projecto. Incluir sempre o `docs/CONTEXTO-PROJECTO.md` actualizado.
+- Antes de entregar: correr `npm install` e `npm run build` e testar a lógica com dados de teste; no fim dizer ao dono o que testar no telemóvel.
 
 ## 6. Estado dos passos
-FEITOS: passo 3 (fiados editáveis, relatório de fiados, WhatsApp, poupança ligada ao saldo, remoção de emojis/porcos, relatório); passo 4 (aba Despesas + relatório); passo 5 (redesign da Poupança com anéis de progresso, ícone de moedas no menu, `semEmoji`); passo 6 (lembrete WhatsApp com `utils/whatsapp.js`, "Como usar a aplicação" no Perfil, Termos e condições revistos, 12 pontos).
-Passo 7: tema azul claro restaurado (`--bg #EEF4FC`, classe `.cartao-azul` em `index.css`), exemplos dos placeholders limpos (excepto 'Comprar um Terreno'). Passo 12: Relatório com secção 'Lucro Líquido' (lucro = vendas sem trocos - custo da mercadoria - salários - despesas - outras saídas; Poupança e Xitique ficam de fora; compara com o período anterior) e 'Ponto de equilíbrio' no mensal (custos / margem das vendas ligadas ao stock; mostra quanto falta e quanto por dia). Lógica em `src/utils/resultado.js`. Passo 9: o método Dinheiro usa a imagem da moeda de 10 MT (`public/metodos/dinheiro.png`, recorte circular). Passo 8: logos de M-Pesa, e-Mola e mKesh (`public/metodos/*.png`, componentes `MetodoLogo` e `SeletorMetodo`) nos cartões do Caixa, na lista de movimentos e nos seletores de método de pagamento.
-Passo 13 (alertas e fecho do dia): ver secção 4 (alertas, Fecho do dia com conferência por método, Lembretes de renda/licenças). Compilado com `npm run build` sem erros; a lógica das datas dos lembretes foi testada, mas o fluxo no telemóvel ainda não foi testado à mão.
-Passo 14 (dossiê para pedir crédito): ver secção 4. Compilado com `npm run build`; o PDF foi gerado e conferido visualmente com dados de teste (3, 6 e 12 meses), mas ainda não foi testado no telemóvel real (descarregar e partilhar).
-Passo 15 (comprovativos, com botão em cada linha da aba Despesas): ver secção 4. Texto e geração do PDF e da imagem testados em isolamento com dados de teste (valor por extenso, nomes longos); falta `npm run build` no projecto completo e testar no telemóvel (Enviar por WhatsApp, descarregar PDF e imagem).
-Passo 16 (produtos mais lucrativos e sugestor de preço): ver secção 4. Compilado com `npm run build`; a lógica do ranking e do sugestor foi testada com dados de teste; falta testar à mão no telemóvel.
-Passo 17 (ficha e limite de fiado por cliente): ver secção 4. Compilado com `npm run build`; a lógica de agrupar clientes, pontualidade e limite foi testada com dados de teste; falta testar à mão no telemóvel.
-Passo 18 (funcionários com salário fixo): ver secção 4. Compilado com `npm run build`; a lógica do estado do salário foi testada com dados de teste; falta testar à mão no telemóvel.
-Este zip já tem TODOS estes passos aplicados.
+**FEITOS (todos no GitHub, no commit "versao16" e seguintes):**
+- Passo 3: fiados editáveis, relatório de fiados, WhatsApp, poupança ligada ao saldo, remoção de emojis/porcos, relatório.
+- Passo 4: aba Despesas + relatório.
+- Passo 5: redesign da Poupança com anéis de progresso, ícone de moedas no menu, `semEmoji`.
+- Passo 6: lembrete WhatsApp (`utils/whatsapp.js`), "Como usar a aplicação" no Perfil, Termos e condições revistos (12 pontos).
+- Passo 7: tema azul claro (`--bg #EEF4FC`, classe `.cartao-azul` em `index.css`), exemplos dos placeholders limpos (excepto 'Comprar um Terreno').
+- Passo 8: logos de M-Pesa, e-Mola e mKesh (`public/metodos/*.png`, `MetodoLogo`, `SeletorMetodo`) nos cartões do Caixa, na lista de movimentos e nos seletores de método.
+- Passo 9: o método Dinheiro usa a imagem da moeda de 10 MT (`public/metodos/dinheiro.png`, recorte circular).
+- Passo 12: Relatório com "Lucro Líquido" (lucro = vendas sem trocos - custo da mercadoria - salários - despesas - outras saídas; Poupança e Xitique ficam de fora; compara com o período anterior) e "Ponto de equilíbrio" no mensal. Lógica em `src/utils/resultado.js`.
+- Passo 13: alertas no Caixa, Fecho do dia com conferência por método, Lembretes de renda/licenças/impostos.
+- Passo 14: dossiê para pedir crédito (PDF A4).
+- Passo 15: comprovativos de pagamento (PDF A5 ou imagem PNG). A secção "Comprovativos" do Perfil foi reposta depois de se ter perdido num envio; o botão "Comprovativo" em cada linha da aba Despesas também está activo.
+- Passo 16: produtos mais lucrativos e sugestor de preço.
+- Passo 17: ficha e limite de fiado por cliente.
+- Passo 18: funcionários com salário fixo, com aviso no Caixa no dia de pagar.
+- Passo 19: registar vendas colando o SMS (M-Pesa, e-Mola, mKesh). Entregue em zip, por aplicar no GitHub. O leitor foi testado com os 6 SMS reais do dono (3 recebidos lidos, 3 de saída recusados); o código foi verificado com esbuild (sintaxe e bundle), mas o `npm run build` completo não correu na sessão (o `npm install` foi bloqueado com erro 403), por isso confirmar no Vercel.
+- **Lacuna:** os passos 1, 2, 10 e 11 não estão descritos neste ficheiro (foram feitos antes ou não ficaram registados). Se o dono se lembrar do que eram, acrescentar aqui.
+
+**Estado de verificação:** `npm install` e `npm run build` passam sem erros (o aviso de chunk acima de 500 kB é só um aviso). A lógica dos passos 12 a 18 foi testada com dados de teste. O PDF do dossiê foi conferido visualmente. **Nada dos passos 13 a 18 foi testado ainda no telemóvel real** (ver secção 7).
 
 ## 7. Pontos em aberto / a verificar
-1. `npm install` e `npm run build` já foram feitos com sucesso (outubro 2026, antes e depois do passo 13). Falta testar à mão no telemóvel: fecho do dia, criar/pagar lembretes, avisos no Caixa, e gerar/partilhar o dossiê em PDF.
-2. O rodapé (`Footer.jsx`) está vazio e o dono decidiu deixá-lo assim.
-3. Termos e condições são texto genérico; um jurista deve rever os pontos 8 (salários) e 10 (responsabilidade).
-4. O SQL de `supabase-setup.sql` não precisa de alterações para as despesas (usam `transacoes`).
+**Testar à mão no telemóvel (por fazer):**
+1. Fecho do dia: conferir dinheiro contado por método, guardar, ver "Certo / Sobram / Faltam".
+2. Lembretes: criar um, ver o aviso no Caixa, pagar e confirmar que avança para o próximo período.
+3. Dossiê: gerar o PDF, descarregar e partilhar (Web Share só funciona onde o aparelho suporta).
+4. Comprovativos: salário e renda, em PDF e em imagem, "Enviar" por WhatsApp e "Descarregar".
+5. Produtos mais lucrativos (3 períodos) e sugestor de preço (custo 100 + 30% deve sugerir 130,00 MT).
+6. Ficha de cliente: limite, aviso ao passar do limite ("Continuar mesmo assim"), botão "Clientes", "Lembrar".
+7. Funcionários: adicionar, aviso no dia de pagar, "Pagar" com formulário preenchido, estado "Pago".
+8. Registar por SMS (passo 19): colar um SMS real de cada serviço recebido hoje, conferir valor/método/dia, guardar, e colar o mesmo outra vez para ver o aviso "já foi registado"; colar um SMS de pagamento feito para ver a recusa.
 
-## 8. Roadmap de ideias (para tornar a app indispensável), por prioridade
-1. ~~Lucro líquido e ponto de equilíbrio~~ FEITO no Relatório (passo 12). Possível evolução: cartão de lucro do mês no ecrã do Caixa, gráficos e produtos mais lucrativos.
-2. ~~Alertas e resumo diário / fecho do dia~~ FEITO (passo 13). Possíveis evoluções: registar a diferença do fecho como ajuste no Caixa, aviso do fecho por notificação/WhatsApp, avisos de lembretes em atraso de meses anteriores.
-3. ~~Dossiê para pedir crédito~~ FEITO (passo 14). Possíveis evoluções: assinatura/carimbo do dono, comparação com o mesmo período do ano anterior, anexar lista de clientes com fiado pago a tempo.
-4. ~~Recibos e comprovativos de salário em PDF/imagem para enviar por WhatsApp~~ FEITO (passo 15): salário (funcionário ou próprio), renda e outras despesas; PDF ou imagem à escolha. Possíveis evoluções: enviar directo ao WhatsApp do funcionário (guardar o número), comprovativo de fiado recebido, assinatura/carimbo do dono.
-5. Funcionários com acesso limitado (registar vendas sem ver lucros/poupança) — exige perfis e permissões.
-6. Extras: registar vendas M-Pesa/e-Mola colando o SMS; ~~ficha e limite de fiado por cliente~~ FEITO (passo 17); ~~produtos mais lucrativos e sugestor de preço~~ FEITO (passo 16); metas do negócio; vários negócios na mesma conta; dicas curtas de gestão; ~~lista de funcionários com salário fixo~~ FEITO (passo 18).
+**Outros pontos:**
+9. O rodapé (`Footer.jsx`) está vazio e o dono decidiu deixá-lo assim.
+10. Termos e condições são texto genérico; um jurista deve rever os pontos 8 (salários) e 10 (responsabilidade).
+11. O SQL de `supabase-setup.sql` não precisa de alterações: tudo o que foi acrescentado desde o passo 4 vai dentro de `saldo_inicial` (JSON) ou de `transacoes`.
+12. Limitações conhecidas e decididas: o cliente de um fiado e a pessoa de um salário identificam-se só pelo nome (sem distinguir maiúsculas/espaços; nomes iguais ficam juntos; mudar o nome quebra a ligação com pagamentos antigos); as unidades do ranking de produtos só contam vendas a pronto; lembretes e salários só contam o período actual (um mês anterior não pago é esquecido); a diferença do fecho do dia não cria movimento no Caixa; o limite de fiado é só por cliente (sem limite geral) e só avisa, não bloqueia.
 
-## 9. Como retomar numa conversa nova
-1. Anexar `Carteira-completo.zip` e este ficheiro.
-2. Dizer: "Continuamos o Minha Carteira. Lê o CONTEXTO-PROJECTO.md, trabalha passo a passo e pergunta quando tiveres dúvidas. Próximo passo: <o que queres>."
+## 8. O que falta fazer (roadmap), por ordem sugerida
+1. **Funcionários com acesso limitado** (registar vendas sem ver lucros nem poupança) — o item mais pesado: exige perfis e permissões (Supabase auth, regras de acesso aos dados, convites). Fazer em partes: (a) desenho e tabelas de perfis/papéis; (b) convite e login do funcionário; (c) ecrãs restritos (só Caixa e Stock); (d) regras de segurança no Supabase. Perguntar ao dono antes de começar.
+2. **Metas do negócio** (por exemplo vender X no mês, com progresso no Caixa).
+3. **Vários negócios na mesma conta.**
+4. **Dicas curtas de gestão** dentro da app.
+5. **Evoluções pequenas já pensadas:**
+   - Cartão de lucro do mês no ecrã do Caixa, e gráficos no Relatório.
+   - Fecho do dia: registar a diferença como ajuste no Caixa; aviso por notificação ou WhatsApp.
+   - Lembretes: avisos de meses anteriores em atraso.
+   - Dossiê: assinatura/carimbo do dono, comparação com o mesmo período do ano anterior, lista de clientes com fiado pago a tempo.
+   - Comprovativos: comprovativo de fiado recebido; assinatura/carimbo do dono.
+   - Funcionários: guardar WhatsApp (o dono decidiu não guardar por agora) e enviar o comprovativo directo.
+   - Fiados: limite geral para todos os clientes, e distinguir dois clientes com o mesmo nome.
+   - SMS: ler também pagamentos feitos (como Saída), colar vários SMS de uma vez, e aceitar SMS mais antigos que 5 dias.
+   - Opcional técnico: dividir o código em partes (code-split) para reduzir o aviso de tamanho do build.
+
+## 9. Fluxo de trabalho com o dono (para evitar erros já ocorridos)
+- O dono usa **GitHub Desktop** (repositório `minha-carteira`, ramo `main`), com um commit por passo (V10 a V15, versao16, etc.). O Vercel publica sozinho a cada push. O dono trabalha no Windows (pasta do projecto no computador).
+- **Retomar sempre a partir do zip do GitHub** (Code > Download ZIP). Já aconteceu um zip de trabalho estar desactualizado (sem os passos 12 a 14) e um envio ter apagado a secção "Comprovativos" do Perfil ao substituir `Perfil.jsx` por uma versão anterior. Antes de editar, confirmar no código que os passos anteriores existem (procurar `resultado.js`, `FechoDiaModal.jsx`, `DossieModal.jsx`, `ReciboModal.jsx`, `produtosLucro.js`, `clientesFiado.js`, `funcionarios.js`).
+- Zips de entrega: `src/...` e `docs/...` à raiz, sem pasta extra (uma pasta extra fez o dono extrair para o sítio errado e o site não mudar).
+- **Nunca enviar o `.env`** (chaves do Supabase) para o GitHub nem anexá-lo em conversas. Pedir ao dono para tirar o `.env` e as pastas `node_modules` e `dist` dos zips.
+- Se o dono disser que não vê uma mudança no site: (1) confirmar commit e push no GitHub Desktop (History, botão "Fetch origin" e não "Push origin"); (2) ver o estado do deploy no Vercel (Deployments, "Ready"); (3) testar em janela anónima; (4) limpar a cache da PWA (Ctrl+Shift+R, ou F12 > Application > Service Workers > Unregister > Clear site data; no telemóvel abrir a app duas vezes).
+- Na interface de escolhas, o dono responde bem a perguntas curtas com 2 a 4 opções.
+
+## 10. Como retomar numa conversa nova
+1. Anexar este ficheiro e o zip do GitHub (`minha-carteira-main.zip`, sem `.env`).
+2. Dizer: "Continuamos o Minha Carteira. Lê o CONTEXTO-PROJECTO.md, confirma no zip que os passos 1 a 18 estão lá, trabalha passo a passo e pergunta quando tiveres dúvidas. Próximo passo: <o que queres>."
+3. O Claude deve começar por verificar o zip (existência dos ficheiros da secção 9) e correr `npm install && npm run build` antes de propor mudanças.
