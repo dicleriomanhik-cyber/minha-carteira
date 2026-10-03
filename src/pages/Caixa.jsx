@@ -13,6 +13,7 @@ import FechoDiaModal from '../components/FechoDiaModal';
 import LembretesModal from '../components/LembretesModal';
 import SmsModal from '../components/SmsModal';
 import MetaCard from '../components/MetaCard';
+import LucroMesCard from '../components/LucroMesCard';
 import { IconeFecho, IconeSino, IconeSms } from '../components/Icons';
 import { useData, METODOS } from '../context/DataContext';
 import { CATEGORIAS, CAT_LOOKUP } from '../context/DataContext';
@@ -177,6 +178,7 @@ export default function Caixa() {
         ))}
       </div>
 
+      <LucroMesCard />
       <MetaCard />
 
       <div className="mt-4 flex gap-3">

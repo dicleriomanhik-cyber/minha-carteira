@@ -4,6 +4,8 @@ import PillButton from './PillButton';
 import { useData } from '../context/DataContext';
 import { CAT_LOOKUP, DESPESA_GRUPOS, DESPESA_IDS } from '../context/DataContext';
 import { calcResultado, calcEquilibrio } from '../utils/resultado';
+import { vendasPorDia, destinoDinheiro, ultimosMeses } from '../utils/graficos';
+import { GraficoVendasDia, GraficoDestino, GraficoMeses } from './Graficos';
 import { HOJE_KEY, semEmoji, formatMoney, formatDataCurta, formatDataLonga, periodoLabel, dateKey } from '../utils/format';
 
 const MESES_LONGO = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -85,8 +87,8 @@ function Seccao({ titulo, children }) {
   );
 }
 
-export default function RelatorioModal({ aberto, aoFechar }) {
-  const [periodo, setPeriodo] = useState('dia');
+export default function RelatorioModal({ aberto, aoFechar, periodoInicial = 'dia' }) {
+  const [periodo, setPeriodo] = useState(periodoInicial);
   const [desloc, setDesloc] = useState(0);
   const { transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado, metas, totalPoupancaCalc } = useData();
 
@@ -153,6 +155,19 @@ export default function RelatorioModal({ aberto, aoFechar }) {
       diasRestantes = desloc === 0 ? Math.max(1, diasMes - Number(HOJE_KEY.slice(8, 10)) + 1) : 0;
     }
 
+    // Gráficos: vendas dia a dia (semana e mês, no mês actual só até hoje), destino do dinheiro e últimos 6 meses.
+    let diasGrafico = [];
+    if (periodo === 'semana' || periodo === 'mes') {
+      const [ini, fim] = intervalo(periodo, desloc);
+      diasGrafico = vendasPorDia(transacoes, ini, fim > HOJE_KEY ? HOJE_KEY : fim);
+    }
+    const destino = destinoDinheiro(res);
+    let meses = [];
+    if (periodo === 'mes') {
+      const [ini] = intervalo('mes', desloc);
+      meses = ultimosMeses(transacoes, new Date(Number(ini.slice(0, 4)), Number(ini.slice(5, 7)) - 1, 1, 12), 6);
+    }
+
     const porDiaMap = new Map();
     txs.forEach((t) => {
       const atual = porDiaMap.get(t.dateKey) || { dateKey: t.dateKey, entradas: 0, saidas: 0 };
@@ -175,7 +190,7 @@ export default function RelatorioModal({ aberto, aoFechar }) {
     return {
       totalEntradas, totalSaidas, totalProdutos, totalMaquina, pagXitique, entXitique, guardadoPoupanca, retiradoPoupanca,
       recebidoFiados, emAbertoFiados, movsPoupanca, fiadosFeitos, fiadosPagos, totalFiadosFeitos, totalFiadosPagos, receitaStock, custoStock, porDia,
-      saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal, despTxs, despPorGrupo, totalDespesas, res, resAnt, equilibrio, diasMes, diasRestantes,
+      diasGrafico, destino, meses, saidasPorCategoria, saidasProdutosTotal, saidasMaquinaTotal, despTxs, despPorGrupo, totalDespesas, res, resAnt, equilibrio, diasMes, diasRestantes,
     };
   }, [periodo, desloc, transacoes, pagamentos, entregas, movimentosPoupanca, fiados, saldoFiado, metas]);
 
@@ -266,6 +281,24 @@ export default function RelatorioModal({ aberto, aoFechar }) {
               </div>
             );
           })()}
+        </Seccao>
+      )}
+
+      {dados.diasGrafico.length > 1 && (
+        <Seccao titulo="Vendas dia a dia">
+          <GraficoVendasDia key={`${periodo}-${desloc}`} dias={dados.diasGrafico} />
+        </Seccao>
+      )}
+
+      {dados.res.temDados && (
+        <Seccao titulo="Para onde vai o dinheiro">
+          <GraficoDestino itens={dados.destino} receita={dados.res.receita} />
+        </Seccao>
+      )}
+
+      {periodo === 'mes' && dados.meses.filter((m) => m.temDados).length >= 2 && (
+        <Seccao titulo="Últimos 6 meses">
+          <GraficoMeses key={desloc} meses={dados.meses} />
         </Seccao>
       )}
 
