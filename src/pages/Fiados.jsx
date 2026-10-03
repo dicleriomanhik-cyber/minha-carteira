@@ -7,6 +7,9 @@ import SeletorMetodo from '../components/SeletorMetodo';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
 import { IconeWhatsApp } from '../components/Icons';
+import ClientesFiadoModal from '../components/ClientesFiadoModal';
+import FichaClienteModal from '../components/FichaClienteModal';
+import { chaveCliente, agruparClientes, verificarLimite, textoLimite } from '../utils/clientesFiado';
 import { useData, METODOS } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, formatDataCurta, iniciais, dateKey, semEmoji } from '../utils/format';
@@ -33,7 +36,7 @@ function historicoFiado(f) {
 }
 
 export default function Fiados() {
-  const { fiados, produtos, saldoFiado, statusFiado, nomesClientesFiado, salvarFiado, aumentarFiado, editarFiado, registarRecebimentoFiado, deleteFiado } = useData();
+  const { fiados, produtos, saldoFiado, statusFiado, nomesClientesFiado, limitesFiado, salvarFiado, aumentarFiado, editarFiado, registarRecebimentoFiado, deleteFiado } = useData();
   const { confirmar, avisar } = useDialog();
 
   const msgFiado = (f) => {
@@ -42,6 +45,8 @@ export default function Fiados() {
   };
 
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [clientesAberto, setClientesAberto] = useState(false);
+  const [fichaChave, setFichaChave] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [campos, setCampos] = useState(CAMPOS_VAZIOS);
   const [metodoSinal, setMetodoSinal] = useState('dinheiro');
@@ -75,6 +80,7 @@ export default function Fiados() {
 
   const pagos = useMemo(() => fiados.filter((f) => saldoFiado(f) <= 0).sort((a, b) => b.criadoEm - a.criadoEm), [fiados, saldoFiado]);
 
+  const fichas = useMemo(() => agruparClientes(fiados, limitesFiado, saldoFiado), [fiados, limitesFiado, saldoFiado]);
   const totalDevido = ativos.reduce((s, f) => s + saldoFiado(f), 0);
   const vencidosCount = ativos.filter((f) => statusFiado(f) === 'vencido').length;
 
@@ -124,6 +130,9 @@ export default function Fiados() {
     if (!vencimento) { await avisar('Escolhe a data de vencimento.'); return; }
 
     const quantidade = campos.produtoStockId ? (parseInt(campos.quantidade) || 1) : null;
+
+    const aviso = verificarLimite(fiados, limitesFiado, cliente, valorTotal - valorPago, saldoFiado);
+    if (aviso && !(await confirmar(textoLimite(cliente, aviso), { textoOk: 'Continuar mesmo assim' }))) return;
 
     const res = salvarFiado({ cliente, telefone: campos.telefone.trim(), produtoStockId: campos.produtoStockId || null, produtoDescricao, quantidade, valorTotal, valorPago, vencimento, metodo: metodoSinal });
     if (res.erro) { await avisar(res.erro); return; }
@@ -184,6 +193,8 @@ export default function Fiados() {
     const valor = parseFloat(aum.valor);
     if (!descricao) { await avisar('Descreve o produto ou serviço que o cliente levou.'); return; }
     if (!valor || valor <= 0) { await avisar('Introduz o valor a acrescentar.'); return; }
+    const aviso = verificarLimite(fiados, limitesFiado, f.cliente, valor, saldoFiado);
+    if (aviso && !(await confirmar(textoLimite(f.cliente, aviso), { textoOk: 'Continuar mesmo assim' }))) return;
     const res = aumentarFiado(f.id, {
       descricao, valor,
       produtoStockId: aum.produtoStockId || null,
@@ -234,7 +245,10 @@ export default function Fiados() {
 
       <div className="mt-6 flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Quem Deve</p>
-        <button onClick={abrirNovo} className="text-xs font-semibold text-[var(--mango)]">+ Fiado</button>
+        <span className="flex items-center gap-4">
+          <button onClick={() => setClientesAberto(true)} className="text-xs font-semibold text-[var(--mango)]">Clientes</button>
+          <button onClick={abrirNovo} className="text-xs font-semibold text-[var(--mango)]">+ Fiado</button>
+        </span>
       </div>
 
       <section className="mt-2 rounded-2xl bg-[var(--paper)] p-4">
@@ -247,17 +261,19 @@ export default function Fiados() {
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-soft)] font-display text-sm font-bold text-[var(--ink)]">
                   {iniciais(f.cliente)}
                 </div>
-                <button type="button" onClick={() => setDetalheId(f.id)} className="min-w-0 flex-1 text-left">
+                <div className="min-w-0 flex-1 text-left">
                   <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--ink)]">
-                    <span className="truncate">{f.cliente}</span>
+                    <button type="button" onClick={() => setFichaChave(chaveCliente(f.cliente))} className="truncate underline decoration-dotted decoration-[var(--ink-soft)] underline-offset-4">{f.cliente}</button>
                     <Badge status={statusFiado(f)} />
                   </div>
-                  <div className="line-clamp-2 text-[11.5px] text-[var(--ink-soft)]">{semEmoji(f.produto)}</div>
-                  <div className="font-mono-ref text-[11.5px] font-semibold text-[var(--ink)]">
-                    deve {formatMoney(saldoFiado(f))} MT
-                    <span className="font-normal text-[var(--ink-soft)]"> · vence {formatDataCurta(f.vencimento)}</span>
-                  </div>
-                </button>
+                  <button type="button" onClick={() => setDetalheId(f.id)} className="block w-full text-left">
+                    <span className="line-clamp-2 block text-[11.5px] text-[var(--ink-soft)]">{semEmoji(f.produto)}</span>
+                    <span className="font-mono-ref block text-[11.5px] font-semibold text-[var(--ink)]">
+                      deve {formatMoney(saldoFiado(f))} MT
+                      <span className="font-normal text-[var(--ink-soft)]"> · vence {formatDataCurta(f.vencimento)}</span>
+                    </span>
+                  </button>
+                </div>
                 <button onClick={() => apagar(f)} aria-label="Apagar" className="shrink-0 p-1 text-[var(--ink-soft)] opacity-50 transition hover:opacity-100">
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
@@ -319,6 +335,16 @@ export default function Fiados() {
               {nomesClientesFiado.map((n) => <option key={n} value={n} />)}
             </datalist>
           </Campo>
+          {(() => {
+            const c = fichas.find((x) => x.chave === chaveCliente(campos.cliente));
+            if (!c || !campos.cliente.trim()) return null;
+            return (
+              <p className="-mt-2 text-xs font-semibold" style={{ color: c.estado === 'passou' ? 'var(--brick)' : 'var(--ink-soft)' }}>
+                {c.deve > 0 ? `Já deve ${formatMoney(c.deve)} MT` : 'Não deve nada agora'}
+                {c.limite ? ` · limite ${formatMoney(c.limite)} MT${c.estado === 'passou' ? ' (já passou)' : ''}` : ''}
+              </p>
+            );
+          })()}
 
           <Campo label="WhatsApp do cliente (opcional)">
             <input className="campo" type="tel" inputMode="tel" placeholder="" value={campos.telefone} onChange={(e) => setCampos((c) => ({ ...c, telefone: e.target.value }))} />
@@ -455,6 +481,9 @@ export default function Fiados() {
           </div>
         )}
       </Modal>
+
+      <ClientesFiadoModal aberto={clientesAberto} aoFechar={() => setClientesAberto(false)} aoEscolher={(k) => { setClientesAberto(false); setFichaChave(k); }} />
+      <FichaClienteModal chave={fichaChave} aoFechar={() => setFichaChave(null)} />
 
       {/* Modal Detalhe */}
       <Modal titulo={fDetalhe?.cliente} aberto={!!fDetalhe} aoFechar={() => setDetalheId(null)}>

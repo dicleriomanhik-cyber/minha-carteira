@@ -13,11 +13,12 @@ import { useData, METODOS } from '../context/DataContext';
 import { useDialog } from '../components/DialogProvider';
 import { formatMoney, dateKey } from '../utils/format';
 import { sugerirPreco } from '../utils/produtosLucro';
+import { verificarLimite, textoLimite } from '../utils/clientesFiado';
 
 const CAMPOS_VAZIOS = { nome: '', quantidade: '', precoCusto: '', precoVenda: '', alertaEm: '3', pacoteCusto: '', pacoteUn: '', sugModo: 'pct', sugValor: '' };
 
 export default function Produtos() {
-  const { produtos, salvarProduto, deleteProduto, reporProduto, lucroRealHojeCalc, registrarVendaComStock, salvarFiado } = useData();
+  const { produtos, salvarProduto, deleteProduto, reporProduto, lucroRealHojeCalc, registrarVendaComStock, salvarFiado, fiados, limitesFiado, saldoFiado } = useData();
   const { confirmar, avisar } = useDialog();
   const { receita, custo, lucro } = lucroRealHojeCalc();
 
@@ -58,6 +59,8 @@ export default function Produtos() {
     if (vModo === 'fiado') {
       if (!vCliente.trim()) { await avisar('Introduz o nome do cliente.'); return; }
       if (!vVenc) { await avisar('Escolhe a data de vencimento.'); return; }
+      const aviso = verificarLimite(fiados, limitesFiado, vCliente.trim(), valor, saldoFiado);
+      if (aviso && !(await confirmar(textoLimite(vCliente.trim(), aviso), { textoOk: 'Continuar mesmo assim' }))) return;
       res = salvarFiado({ cliente: vCliente.trim(), telefone: vTelefone.trim(), produtoStockId: p.id, produtoDescricao: p.nome, quantidade: qtd, valorTotal: valor, valorPago: 0, vencimento: vVenc });
     } else {
       res = registrarVendaComStock({ tipo: 'entrada', categoria: 'venda', valor, nota: '', setor: 'produtos', metodo: vMetodo, produtoId: p.id, quantidade: qtd });

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { HOJE_KEY, amanhaKey, novoId, mesAtualLabel, timestampParaDia, dateKey, formatMoney } from '../utils/format';
 import { proximaOcorrencia, textoPrazo, TIPOS_LEMBRETE } from '../utils/lembretes';
+import { chaveCliente } from '../utils/clientesFiado';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -438,6 +439,18 @@ export function DataProvider({ children }) {
 
   const nomesClientesFiado = useMemo(() => [...new Set(fiados.map((f) => f.cliente))].sort(), [fiados]);
 
+  // Limite de fiado por cliente. Guardado dentro de saldo_inicial (__limitesFiado), por isso sincroniza sem alterar o SQL.
+  const limitesFiado = useMemo(() => saldoInicialMap.__limitesFiado || {}, [saldoInicialMap]);
+  const definirLimiteFiado = useCallback((cliente, valor) => {
+    const k = chaveCliente(cliente);
+    if (!k) return;
+    setSaldoInicialMap((m) => {
+      const atual = { ...(m.__limitesFiado || {}) };
+      if (valor > 0) atual[k] = Math.round(valor * 100) / 100; else delete atual[k];
+      return { ...m, __limitesFiado: atual };
+    });
+  }, [setSaldoInicialMap]);
+
   const registarRecebimentoFiado = useCallback((fiadoId, valor, categoria, nota, metodo) => {
     const fiado = fiados.find((f) => f.id === fiadoId);
     if (!fiado) return;
@@ -658,7 +671,7 @@ export function DataProvider({ children }) {
     totalGuardadoXitique, registrarEntrega, deleteEntrega,
     totalPoupancaCalc, guardarPoupanca, depositosSemSaida, descontarDepositosAntigos, retirarPoupanca, deleteMovimentoPoupanca, guardadoMesAtual,
     metas, addMeta, deleteMeta, saldoPorMetodo,
-    saldoFiado, statusFiado, nomesClientesFiado, salvarFiado, aumentarFiado, editarFiado, registarRecebimentoFiado, deleteFiado,
+    saldoFiado, statusFiado, nomesClientesFiado, limitesFiado, definirLimiteFiado, salvarFiado, aumentarFiado, editarFiado, registarRecebimentoFiado, deleteFiado,
     salvarProduto, deleteProduto, reporProduto,
     negocio, setNegocio, fechos, salvarFecho, lembretes, addLembrete, deleteLembrete, marcarLembretePago,
     computeAlertas, exportarBackup, importarBackup,
