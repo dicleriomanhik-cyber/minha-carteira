@@ -15,6 +15,7 @@ import SmsModal from '../components/SmsModal';
 import MetaCard from '../components/MetaCard';
 import LucroMesCard from '../components/LucroMesCard';
 import DicaDoDia from '../components/DicaDoDia';
+import VendasFuncionariosAviso from '../components/VendasFuncionariosAviso';
 import { IconeFecho, IconeSino, IconeSms } from '../components/Icons';
 import { useData, METODOS } from '../context/DataContext';
 import { CATEGORIAS, CAT_LOOKUP } from '../context/DataContext';
@@ -135,6 +136,7 @@ export default function Caixa() {
   return (
     <Layout>
       <AlertBanner aoAbrirFecho={() => setFechoAberto(true)} aoAbrirLembretes={() => setLembretesAberto(true)} />
+      <VendasFuncionariosAviso />
 
       <HeroCard
         label="Saldo Total"

@@ -1,9 +1,8 @@
 import { supabase } from '../lib/supabase';
 
-// O ecrã de entrada do funcionário (fase 3) já existe em /funcionario e funciona sempre.
-// Esta chave só controla o que o dono vê: o botão "Entrar como funcionário" no Login/Cadastro, o botão de enviar o acesso
-// por WhatsApp e o aviso na janela de acessos. Mudar para true quando as vendas dos funcionários já entrarem no Caixa do dono.
-export const ENTRADA_FUNCIONARIO_ATIVA = false;
+// Fase 4 feita: o ecrã de entrada do funcionário (/funcionario) e a importação das vendas dele para o Caixa do dono estão activos.
+// Esta chave mostra ao dono o botão "Entrar como funcionário" no Login/Cadastro e o botão de enviar o acesso por WhatsApp.
+export const ENTRADA_FUNCIONARIO_ATIVA = true;
 
 // Traduz os erros das funções dono_* do Supabase (supabase-funcionarios.sql) para mensagens que o dono entende.
 export function mensagemErroAcesso(error) {

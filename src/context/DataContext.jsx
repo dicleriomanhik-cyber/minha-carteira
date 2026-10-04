@@ -5,6 +5,7 @@ import { chaveCliente } from '../utils/clientesFiado';
 import { statusSalario } from '../utils/funcionarios';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
+import { prepararImportacao, descontarStock } from '../utils/importarVendasFuncionarios';
 
 const STORAGE_KEY = 'caixaDoDia_transacoes';
 const STORAGE_SALDO_INICIAL = 'caixaDoDia_saldoInicial';
@@ -164,6 +165,68 @@ export function DataProvider({ children }) {
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, transacoes, saldoInicialMap, participantes, pagamentos, entregas, movimentosPoupanca, fiados, produtos]);
+
+  /* ---------- Vendas dos funcionários (entram no Caixa e no Stock) ---------- */
+  // O funcionário regista as vendas numa tabela à parte (vendas_funcionarios). Aqui passam para o Caixa e descontam o stock.
+  // Ordem segura: 1) junta ao Caixa e ao Stock, 2) grava o JSON no Supabase, 3) só então marca as vendas como importadas.
+  // Se a app fechar a meio, a venda volta a aparecer na próxima vez e o id "func-<id>" impede que conte duas vezes.
+  const dadosRef = useRef({});
+  dadosRef.current = { transacoes, saldoInicialMap, participantes, pagamentos, entregas, movimentosPoupanca, fiados, produtos };
+  const importandoRef = useRef(false);
+  const [vendasFuncionariosNovas, setVendasFuncionariosNovas] = useState(null); // { n, total } para avisar o dono
+  const limparVendasFuncionariosNovas = useCallback(() => setVendasFuncionariosNovas(null), []);
+
+  const userId = user?.id;
+  const importarVendasFuncionarios = useCallback(async () => {
+    if (!userId || !prontoRef.current || importandoRef.current) return;
+    importandoRef.current = true;
+    try {
+      const { data: vendas, error } = await supabase.from('vendas_funcionarios')
+        .select('id, funcionario_nome, produto_id, produto_nome, quantidade, valor, metodo, data_key, criado_em')
+        .eq('importada', false).order('criado_em', { ascending: true }).limit(500);
+      if (error || !vendas || vendas.length === 0) return;
+
+      const d = dadosRef.current;
+      const r = prepararImportacao({ vendas, transacoes: d.transacoes, produtos: d.produtos });
+
+      if (r.novas.length > 0) {
+        const { error: erroGravar } = await supabase.from('dados_financeiros').upsert({
+          id: userId,
+          transacoes: [...d.transacoes, ...r.novas],
+          saldo_inicial: d.saldoInicialMap, participantes: d.participantes, pagamentos: d.pagamentos, entregas: d.entregas,
+          movimentos_poupanca: d.movimentosPoupanca, fiados: d.fiados, produtos: r.produtos,
+          atualizado_em: new Date().toISOString(),
+        });
+        if (erroGravar) return; // não marca nada: tenta outra vez mais tarde
+        setTransacoes((arr) => {
+          const ids = new Set(arr.map((t) => t.id));
+          return [...arr, ...r.novas.filter((t) => !ids.has(t.id))];
+        });
+        setProdutos((arr) => descontarStock(arr, r.novas));
+      }
+
+      const { error: erroMarcar } = await supabase.from('vendas_funcionarios')
+        .update({ importada: true, importada_em: new Date().toISOString() })
+        .in('id', r.ids);
+      if (!erroMarcar && r.novas.length > 0) {
+        setVendasFuncionariosNovas((a) => ({ n: (a?.n || 0) + r.novas.length, total: (a?.total || 0) + r.total }));
+      }
+    } catch {
+      // sem ligação ou tabela em falta: não faz nada, tenta outra vez mais tarde
+    } finally {
+      importandoRef.current = false;
+    }
+  }, [userId, setTransacoes, setProdutos]);
+
+  // Importa quando a app abre (depois de carregar os dados), quando volta ao primeiro plano e de minuto a minuto.
+  useEffect(() => {
+    if (!userId || carregandoDados) return undefined;
+    importarVendasFuncionarios();
+    const intervalo = setInterval(importarVendasFuncionarios, 60 * 1000);
+    const aoVoltar = () => { if (document.visibilityState === 'visible') importarVendasFuncionarios(); };
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => { clearInterval(intervalo); document.removeEventListener('visibilitychange', aoVoltar); };
+  }, [userId, carregandoDados, importarVendasFuncionarios]);
 
   /* ---------- Saldo inicial / caixa do dia (por setor: produtos e máquina) ---------- */
   // Formato novo: saldoInicialMap[dk] = { produtos: number, maquina: number }
@@ -711,6 +774,7 @@ export function DataProvider({ children }) {
     salvarProduto, deleteProduto, reporProduto,
     negocio, setNegocio, fechos, salvarFecho, lembretes, addLembrete, deleteLembrete, marcarLembretePago,
     computeAlertas, exportarBackup, importarBackup,
+    vendasFuncionariosNovas, limparVendasFuncionariosNovas, importarVendasFuncionarios,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
