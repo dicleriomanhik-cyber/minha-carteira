@@ -12,6 +12,7 @@ import MensagemErro from '../components/MensagemErro';
 import { formatMoney } from '../utils/format';
 import DossieModal from '../components/DossieModal';
 import ReciboModal from '../components/ReciboModal';
+import TermosModal from '../components/TermosModal';
 import AcessoFuncionariosModal from '../components/AcessoFuncionariosModal';
 import { IconeCamara, IconeCaneta, IconeBackup } from '../components/Icons';
 
@@ -36,28 +37,6 @@ function InfoCard({ label, valor }) {
     </div>
   );
 }
-
-const TERMOS = [
-  ["1. O que é esta aplicação", 'Uma ferramenta para registares o teu caixa, fiados, stock, xitique, poupança, salários e despesas. Não substitui um contabilista e não dá aconselhamento financeiro, fiscal ou jurídico.'],
-  ["2. A tua conta e os teus dados", 'Os teus registos ficam guardados na tua conta, para os poderes ver em vários aparelhos, e também neste telemóvel. Servem para a aplicação funcionar para ti. Só tu deves ter acesso à tua conta, por isso guarda bem a tua palavra-passe.'],
-  ["3. Backup", 'Podes exportar uma cópia dos teus dados a qualquer momento. Recomendamos que o faças com regularidade.'],
-  ["4. Dados de outras pessoas", 'Ao guardares nomes e números de clientes, de participantes do xitique ou de funcionários, deves ter o consentimento deles e usar esses dados apenas para a tua atividade, como cobrar um fiado, lembrar um pagamento ou registar um salário. O nome do funcionário fica ligado às vendas que registou e aos salários que lhe pagas. Se apagares um funcionário, as vendas dele ficam guardadas com o nome. Avisa os teus funcionários e clientes de que os dados deles estão guardados na aplicação.'],
-  ["5. Funcionários com acesso por PIN", 'Podes dar acesso limitado aos teus funcionários, com um código da loja e um PIN para cada um. Com esse acesso, o funcionário só vê os produtos, os preços de venda e a quantidade disponível, e regista as suas vendas. Não vê custos, lucros, poupança nem relatórios, e não pode anular vendas. As vendas que ele regista entram no teu Caixa e no teu Stock, com o nome dele. Tu és responsável por quem recebe o acesso: dá o PIN só à própria pessoa, muda o PIN ou desliga o acesso quando o funcionário sair, e gera um código novo da loja se alguém não autorizado o souber. O funcionário deve usar o telemóvel dele e tocar em Sair quando acabar. Depois de 5 PINs errados, a entrada da loja fica bloqueada durante 15 minutos.'],
-  ["6. Lembretes por WhatsApp", 'A aplicação apenas abre o WhatsApp com uma mensagem de lembrete já escrita. O envio é sempre feito por ti, e nada é enviado automaticamente. Usa os lembretes com respeito e só com clientes que te conhecem e te deram o número.'],
-  ["7. Fiados", 'Podes aumentar, receber e editar uma dívida (valor, produto ou serviço, data de vencimento). O relatório mostra o dia em que a dívida foi feita e o dia em que foi paga. Os valores recebidos entram no Caixa na data do recebimento.'],
-  ["8. Registar por SMS", 'Podes colar um SMS de dinheiro recebido (M-Pesa, e-Mola ou mKesh) para a aplicação preencher o registo. O texto do SMS é lido só no teu telemóvel e não é enviado para fora; só fica guardado o registo que tu confirmares. Confirmas sempre os dados antes de guardar. Se um operador mudar o texto das mensagens, a leitura pode falhar e terás de registar à mão.'],
-  ["9. Poupança", 'A Poupança é um registo de controlo dentro da aplicação. Ela não é uma conta bancária e não guarda dinheiro real, nem paga juros. O que guardas sai do saldo total do Caixa. Ao retirar, o dinheiro não volta ao Caixa; fica só o registo.'],
-  ["10. Salários e despesas", 'Os pagamentos de salários (o teu e os dos funcionários) e as despesas operacionais saem do saldo total e aparecem no relatório. Estes registos servem para o teu controlo e não substituem a folha de salários, os descontos legais (como a segurança social) nem as declarações de impostos, que são da tua responsabilidade.'],
-  ["11. Comprovativos e dossiê de crédito", 'Os comprovativos de pagamento e o dossiê para pedir crédito são documentos gerados por ti, a partir do que registaste. Não são facturas nem recibos fiscais, não substituem documentos oficiais e não garantem que um banco ou outra entidade aprove um crédito. Confere os dados antes de os partilhar com alguém.'],
-  ["12. Exatidão dos registos", 'Os totais são calculados a partir do que registas. Se houver erros nos registos, haverá erros nos totais. Confere os valores antes de tomares decisões.'],
-  ["13. Vários aparelhos", 'Usa um aparelho de cada vez. Se tiveres a aplicação aberta em dois aparelhos, a última gravação pode substituir registos feitos no outro, incluindo vendas de funcionários. Antes de registares algo num aparelho que esteve parado, fecha e abre a aplicação.'],
-  ["14. Privacidade: que dados guardamos", 'Da tua conta: nome, WhatsApp, email e, se quiseres, uma foto. Do teu negócio: caixa, vendas, fiados (com o nome e o telefone dos clientes), participantes do xitique, stock, poupança, salários e despesas, e os nomes dos funcionários. Do acesso dos funcionários: o nome, o PIN e as vendas que registam. O PIN é guardado de forma cifrada, por isso ninguém o consegue ver, nem nós. Usamos estes dados só para a aplicação funcionar para ti.'],
-  ["15. Privacidade: onde ficam e quem os vê", 'Os teus dados ficam neste telemóvel e na tua conta, num serviço de base de dados na nuvem (Supabase), que pode estar fora de Moçambique. O site é publicado através do Vercel. Não vendemos os teus dados. Só tu vês os teus registos, com a tua conta; o funcionário só vê o catálogo e as vendas dele. A equipa da SmartMetrics não abre os teus registos no dia a dia: só os pode ver se pedires ajuda ao Suporte e for preciso para resolver o teu problema.'],
-  ["16. Os teus direitos e excluir a conta", 'Podes exportar uma cópia dos teus dados no Perfil, a qualquer momento, e corrigir o teu nome, WhatsApp e foto. Podes excluir a tua conta no Perfil, em Excluir conta: os registos da tua conta e do teu negócio são apagados de forma permanente e não podem ser recuperados.'],
-  ["17. Limite de responsabilidade", 'A aplicação é fornecida tal como está, sem garantia de funcionamento contínuo ou livre de erros. Na medida permitida pela lei, a SmartMetrics Limitada não se responsabiliza por perdas resultantes do seu uso.'],
-  ["18. Alterações", 'Estes termos podem mudar quando a aplicação evoluir. A versão em vigor é a que aparece aqui. Última atualização: outubro de 2026.'],
-  ["19. Contacto", 'Para dúvidas, usa a secção Suporte no teu Perfil.'],
-];
 
 const GUIA = [
   ["Caixa", 'É a base da aplicação. Regista as entradas (vendas de produtos, serviços, outras entradas) e as saídas do dia, escolhendo se foi dinheiro, M-Pesa, e-Mola ou mKesh. O saldo total é a soma automática dos saldos de Produtos e de Serviços, e acumula de um dia para o outro. Para corrigir um erro, apaga o registo com o ✕ e faz de novo.'],
@@ -337,13 +316,7 @@ export default function Perfil() {
       </Modal>
 
       {/* Termos e condições */}
-      <Modal titulo="Termos e condições" aberto={termosAberto} aoFechar={() => setTermosAberto(false)}>
-        <div className="space-y-3 text-sm leading-relaxed text-[var(--ink-soft)]">
-          {TERMOS.map(([t, x]) => (
-            <div key={t}><p className="font-semibold text-[var(--ink)]">{t}</p><p>{x}</p></div>
-          ))}
-        </div>
-      </Modal>
+      <TermosModal aberto={termosAberto} aoFechar={() => setTermosAberto(false)} />
 
       {/* Confirmar exclusão de conta */}
       <Modal titulo="Excluir conta" aberto={confirmarExclusao} aoFechar={() => setConfirmarExclusao(false)}>

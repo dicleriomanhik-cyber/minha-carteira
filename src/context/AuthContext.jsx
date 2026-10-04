@@ -29,11 +29,12 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, [carregarPerfil]);
 
-  const cadastrar = useCallback(async ({ nome, whatsapp, email, senha }) => {
+  const cadastrar = useCallback(async ({ nome, whatsapp, email, senha, termosVersao }) => {
+    // A aceitação dos Termos fica guardada nos dados da conta (sem alterar o SQL).
     const { data, error } = await supabase.auth.signUp({
       email,
       password: senha,
-      options: { data: { nome, whatsapp } },
+      options: { data: { nome, whatsapp, termos_versao: termosVersao, termos_aceites_em: new Date().toISOString() } },
     });
     return { data, error };
   }, []);
