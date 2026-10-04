@@ -3,6 +3,7 @@ import Header from './Header';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
 import RelatorioModal from './RelatorioModal';
+import ContaEmExclusaoAviso from './ContaEmExclusaoAviso';
 
 function SubHeader({ titulo, aoVoltar }) {
   return (
@@ -30,7 +31,10 @@ export default function Layout({ children, titulo, aoVoltar }) {
       {subPagina
         ? <SubHeader titulo={titulo} aoVoltar={aoVoltar} />
         : <Header aoAbrirRelatorio={() => setRelatorioAberto(true)} />}
-      <main className="mx-auto max-w-md px-4 py-5">{children}</main>
+      <main className="mx-auto max-w-md px-4 py-5">
+        <ContaEmExclusaoAviso />
+        {children}
+      </main>
       <Footer />
       <BottomNav />
       <RelatorioModal aberto={relatorioAberto} aoFechar={() => setRelatorioAberto(false)} />

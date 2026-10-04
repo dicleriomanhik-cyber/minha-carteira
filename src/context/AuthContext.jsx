@@ -55,14 +55,41 @@ export function AuthProvider({ children }) {
     return { data, error };
   }, [session]);
 
+  // Excluir a conta: fica marcada para ser apagada daqui a 7 dias e a pessoa pode recuperá-la
+  // se voltar a entrar nesse prazo. A foto é apagada logo, porque os ficheiros do Storage
+  // só se apagam pela API da app e não pelo SQL da limpeza diária.
   const excluirConta = useCallback(async () => {
-    // Apagar a conta em si exige a service_role key (não deve viver no frontend).
-    // Por segurança, aqui apagamos os dados do perfil e terminamos a sessão;
-    // a remoção definitiva da conta de autenticação fica para uma Edge Function.
-    const { error } = await supabase.rpc('excluir_minha_conta').catch(() => ({ error: { message: 'not_configured' } }));
+    const userId = session?.user?.id;
+    if (!userId) return { error: { message: 'sem_sessao' } };
+    try {
+      const { error } = await supabase.rpc('pedir_exclusao_conta');
+      if (error) return { error };
+    } catch (e) {
+      return { error: { message: 'not_configured' } };
+    }
+    try {
+      const { data: ficheiros } = await supabase.storage.from('avatars').list(userId);
+      if (ficheiros?.length) {
+        await supabase.storage.from('avatars').remove(ficheiros.map((f) => `${userId}/${f.name}`));
+      }
+      await supabase.from('profiles').update({ foto_url: null }).eq('id', userId);
+    } catch {
+      /* se a foto não sair agora, a conta continua marcada para apagar */
+    }
     await supabase.auth.signOut();
-    return { error };
-  }, []);
+    return { error: null };
+  }, [session]);
+
+  const cancelarExclusao = useCallback(async () => {
+    try {
+      const { error } = await supabase.rpc('cancelar_exclusao_conta');
+      if (error) return { error };
+    } catch (e) {
+      return { error: { message: 'not_configured' } };
+    }
+    await carregarPerfil(session?.user?.id);
+    return { error: null };
+  }, [session, carregarPerfil]);
 
   const value = {
     session,
@@ -76,6 +103,7 @@ export function AuthProvider({ children }) {
     sair,
     atualizarPerfil,
     excluirConta,
+    cancelarExclusao,
     recarregarPerfil: () => carregarPerfil(session?.user?.id),
   };
 

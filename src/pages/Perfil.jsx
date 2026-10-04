@@ -147,7 +147,7 @@ export default function Perfil() {
 
   async function aoConfirmarExclusao() {
     const { error } = await excluirConta();
-    if (error && error.message !== 'not_configured') {
+    if (error) {
       setErro('Não foi possível excluir a conta agora. Tenta novamente.');
       return;
     }
@@ -321,7 +321,7 @@ export default function Perfil() {
       {/* Confirmar exclusão de conta */}
       <Modal titulo="Excluir conta" aberto={confirmarExclusao} aoFechar={() => setConfirmarExclusao(false)}>
         <p className="mb-4 text-sm leading-relaxed text-[var(--ink-soft)]">
-          Isto apaga a tua conta e todos os dados associados de forma permanente. Não é possível desfazer. Tens a certeza?
+          A tua conta fica marcada para ser apagada daqui a 7 dias. Se entrares outra vez antes disso, podes recuperá-la com todos os teus dados. Passados os 7 dias, a conta e todos os dados do teu negócio são apagados de forma permanente e não podem ser recuperados. A tua foto de perfil é apagada já. Tens a certeza?
         </p>
         {erro && <div className="mb-3"><MensagemErro>{erro}</MensagemErro></div>}
         <div className="space-y-2.5">
