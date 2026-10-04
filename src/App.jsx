@@ -10,6 +10,7 @@ import Xitique from './pages/Xitique';
 import Poupanca from './pages/Poupanca';
 import Perfil from './pages/Perfil';
 import Despesas from './pages/Despesas';
+import Funcionario from './pages/Funcionario';
 
 export default function App() {
   return (
@@ -17,17 +18,26 @@ export default function App() {
       <DataProvider>
         <DialogProvider>
           <BrowserRouter>
-            <AuthGate>
-              <Routes>
-                <Route path="/" element={<Caixa />} />
-                <Route path="/fiados" element={<Fiados />} />
-                <Route path="/produtos" element={<Produtos />} />
-                <Route path="/xitique" element={<Xitique />} />
-                <Route path="/poupanca" element={<Poupanca />} />
-                <Route path="/despesas" element={<Despesas />} />
-                <Route path="/perfil" element={<Perfil />} />
-              </Routes>
-            </AuthGate>
+            <Routes>
+              {/* Entrada do funcionário (código da loja + PIN): não passa pelo login do dono. */}
+              <Route path="/funcionario" element={<Funcionario />} />
+              <Route
+                path="*"
+                element={(
+                  <AuthGate>
+                    <Routes>
+                      <Route path="/" element={<Caixa />} />
+                      <Route path="/fiados" element={<Fiados />} />
+                      <Route path="/produtos" element={<Produtos />} />
+                      <Route path="/xitique" element={<Xitique />} />
+                      <Route path="/poupanca" element={<Poupanca />} />
+                      <Route path="/despesas" element={<Despesas />} />
+                      <Route path="/perfil" element={<Perfil />} />
+                    </Routes>
+                  </AuthGate>
+                )}
+              />
+            </Routes>
           </BrowserRouter>
         </DialogProvider>
       </DataProvider>

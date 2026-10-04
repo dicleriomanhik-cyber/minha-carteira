@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase';
 
-// A entrada do funcionário (código da loja + PIN) só fica activa na fase 3.
-// Quando essa fase for entregue, mudar para true: aparece o botão de enviar o acesso por WhatsApp e some o aviso.
+// O ecrã de entrada do funcionário (fase 3) já existe em /funcionario e funciona sempre.
+// Esta chave só controla o que o dono vê: o botão "Entrar como funcionário" no Login/Cadastro, o botão de enviar o acesso
+// por WhatsApp e o aviso na janela de acessos. Mudar para true quando as vendas dos funcionários já entrarem no Caixa do dono.
 export const ENTRADA_FUNCIONARIO_ATIVA = false;
 
 // Traduz os erros das funções dono_* do Supabase (supabase-funcionarios.sql) para mensagens que o dono entende.

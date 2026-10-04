@@ -119,7 +119,7 @@ export default function AcessoFuncionariosModal({ aberto, aoFechar }) {
           </p>
           {!ENTRADA_FUNCIONARIO_ATIVA && (
             <p className="rounded-2xl bg-[var(--amber-soft)] px-4 py-3 text-xs text-[var(--ink)]">
-              O ecrã de entrada dos funcionários ainda não está activo. Já podes preparar os PINs; vais avisar os funcionários quando estiver pronto.
+              As vendas dos funcionários ainda não entram no teu Caixa. Já podes preparar os PINs; avisa os funcionários só quando estiver pronto.
             </p>
           )}
           <MensagemErro>{erro}</MensagemErro>
