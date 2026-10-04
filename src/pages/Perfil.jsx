@@ -12,6 +12,7 @@ import MensagemErro from '../components/MensagemErro';
 import { formatMoney } from '../utils/format';
 import DossieModal from '../components/DossieModal';
 import ReciboModal from '../components/ReciboModal';
+import AcessoFuncionariosModal from '../components/AcessoFuncionariosModal';
 import { IconeCamara, IconeCaneta, IconeBackup } from '../components/Icons';
 
 function PillButton({ icon: Icon, label, onClick }) {
@@ -86,6 +87,7 @@ export default function Perfil() {
   const [guiaAberto, setGuiaAberto] = useState(false);
   const [dossieAberto, setDossieAberto] = useState(false);
   const [reciboAberto, setReciboAberto] = useState(false);
+  const [acessoAberto, setAcessoAberto] = useState(false);
   const [ultimoBackup, setUltimoBackup] = useState(() => { try { return localStorage.getItem('carteira_ultimo_backup') || ''; } catch { return ''; } });
   function fazerExport() {
     exportarBackup();
@@ -209,6 +211,17 @@ export default function Perfil() {
         </div>
 
         <div className="mt-6 w-full">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Funcionários</p>
+          <button onClick={() => setAcessoAberto(true)} className="flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
+            <span>
+              <span className="block text-sm font-semibold text-[var(--ink)]">Acesso dos funcionários</span>
+              <span className="mt-0.5 block text-xs text-[var(--ink-soft)]">Cada um entra com um PIN e só regista vendas</span>
+            </span>
+            <span aria-hidden="true" className="text-[var(--ink)]">›</span>
+          </button>
+        </div>
+
+        <div className="mt-6 w-full">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Crédito e financiamento</p>
           <button onClick={() => setDossieAberto(true)} className="flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
             <span>
@@ -263,6 +276,7 @@ export default function Perfil() {
 
       <DossieModal aberto={dossieAberto} aoFechar={() => setDossieAberto(false)} />
       <ReciboModal aberto={reciboAberto} aoFechar={() => setReciboAberto(false)} />
+      <AcessoFuncionariosModal aberto={acessoAberto} aoFechar={() => setAcessoAberto(false)} />
 
       {/* Editar informações */}
       <Modal titulo="Editar Informações" aberto={aEditar === true} aoFechar={() => setAEditar(false)}>
