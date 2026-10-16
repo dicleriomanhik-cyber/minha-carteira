@@ -1,12 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ENTRADA_FUNCIONARIO_ATIVA } from '../utils/acessoFuncionarios';
 import { useAuth } from '../context/AuthContext';
 import Campo from '../components/Campo';
 import Botao from '../components/Botao';
 import MensagemErro from '../components/MensagemErro';
-import TermosModal from '../components/TermosModal';
-import { VERSAO_TERMOS } from '../utils/termos';
 
 export default function Cadastro({ aoIrParaLogin }) {
   const { cadastrar } = useAuth();
@@ -18,8 +14,6 @@ export default function Cadastro({ aoIrParaLogin }) {
   const [erro, setErro] = useState('');
   const [aEnviar, setAEnviar] = useState(false);
   const [sucesso, setSucesso] = useState(false);
-  const [aceitou, setAceitou] = useState(false);
-  const [termosAberto, setTermosAberto] = useState(false);
 
   async function aoSubmeter(e) {
     e.preventDefault();
@@ -29,10 +23,9 @@ export default function Cadastro({ aoIrParaLogin }) {
     if (!email.trim()) return setErro('Escreve o teu email.');
     if (senha.length < 6) return setErro('A senha precisa de pelo menos 6 caracteres.');
     if (senha !== confirmarSenha) return setErro('As senhas não coincidem.');
-    if (!aceitou) return setErro('Para criar a conta, aceita os Termos e condições.');
 
     setAEnviar(true);
-    const { error } = await cadastrar({ nome: nome.trim(), whatsapp: whatsapp.trim(), email: email.trim(), senha, termosVersao: VERSAO_TERMOS });
+    const { error } = await cadastrar({ nome: nome.trim(), whatsapp: whatsapp.trim(), email: email.trim(), senha });
     setAEnviar(false);
     if (error) {
       if (error.message?.toLowerCase().includes('already') || error.message?.toLowerCase().includes('registered')) {
@@ -88,27 +81,14 @@ export default function Cadastro({ aoIrParaLogin }) {
             <input className="campo" type="password" placeholder="Repete a senha" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} autoComplete="new-password" />
           </Campo>
 
-          <div className="flex items-start gap-3 pt-1">
-            <input id="aceitar-termos" type="checkbox" checked={aceitou} onChange={(e) => setAceitou(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--mango)]" />
-            <p className="text-sm leading-snug text-[var(--ink-soft)]">
-              <label htmlFor="aceitar-termos">Li e aceito os </label>
-              <button type="button" onClick={() => setTermosAberto(true)} className="font-semibold text-[var(--ink)] underline">Termos e condições</button>
-              <label htmlFor="aceitar-termos">.</label>
-            </p>
-          </div>
-
           {erro && <MensagemErro>{erro}</MensagemErro>}
 
           <div className="pt-2">
             <Botao type="submit" disabled={aEnviar}>{aEnviar ? 'A criar conta...' : 'Criar conta'}</Botao>
           </div>
           <Botao type="button" variante="fantasma" onClick={aoIrParaLogin}>Já tenho conta — Entrar</Botao>
-          {ENTRADA_FUNCIONARIO_ATIVA && (
-            <Link to="/funcionario" className="block w-full rounded-full px-4 py-3 text-center text-sm font-semibold text-[var(--ink-soft)] hover:bg-black/[0.04]">Entrar como funcionário</Link>
-          )}
         </form>
       </div>
-      <TermosModal aberto={termosAberto} aoFechar={() => setTermosAberto(false)} />
     </div>
   );
 }

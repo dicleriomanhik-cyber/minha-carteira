@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ENTRADA_FUNCIONARIO_ATIVA } from '../utils/acessoFuncionarios';
 import { useAuth } from '../context/AuthContext';
 import Campo from '../components/Campo';
 import Botao from '../components/Botao';
@@ -56,9 +54,6 @@ export default function Login({ aoIrParaCadastro }) {
             <Botao type="submit" disabled={aEnviar}>{aEnviar ? 'A entrar...' : 'Entrar'}</Botao>
           </div>
           <Botao type="button" variante="fantasma" onClick={aoIrParaCadastro}>Não tenho conta — Criar conta</Botao>
-          {ENTRADA_FUNCIONARIO_ATIVA && (
-            <Link to="/funcionario" className="block w-full rounded-full px-4 py-3 text-center text-sm font-semibold text-[var(--ink-soft)] hover:bg-black/[0.04]">Entrar como funcionário</Link>
-          )}
         </form>
       </div>
     </div>

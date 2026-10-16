@@ -45,6 +45,7 @@ export const CAT_LOOKUP = [...CATEGORIAS.entrada, ...CATEGORIAS.saida].reduce((a
 CAT_LOOKUP['poupanca'] = { id: 'poupanca', label: 'Para Poupança' };
 CAT_LOOKUP['fiado_recebido'] = { id: 'fiado_recebido', label: 'Fiado Recebido' };
 CAT_LOOKUP['fiado_sinal'] = { id: 'fiado_sinal', label: 'Sinal de Fiado' };
+CAT_LOOKUP['xitique_parte'] = { id: 'xitique_parte', label: 'Parte de Xitique' };
 
 // Salários e despesas operacionais (saem do saldo total e aparecem no relatório).
 export const DESPESA_GRUPOS = [
@@ -82,6 +83,12 @@ export const DESPESA_GRUPOS = [
 ];
 export const DESPESA_IDS = new Set(DESPESA_GRUPOS.flatMap((g) => g.itens.map((i) => i.id)));
 DESPESA_GRUPOS.forEach((g) => g.itens.forEach((i) => { CAT_LOOKUP[i.id] = { id: i.id, label: i.label, grupo: g.label }; }));
+
+export const XITIQUE_LEGADO = 'legado';
+// Cada participante ou entrega pertence a um xitique. Registos antigos (sem xitiqueId) ficam no legado.
+export function xitiqueIdDe(o) {
+  return (o && o.xitiqueId) || XITIQUE_LEGADO;
+}
 
 function readJSON(key, fallback) {
   try {
@@ -420,11 +427,11 @@ export function DataProvider({ children }) {
   const pagouDia = useCallback((participanteId, dk = HOJE_KEY) => pagamentos.some((p) => p.participanteId === participanteId && p.dateKey === dk), [pagamentos]);
   const pagouHoje = useCallback((participanteId) => pagouDia(participanteId, HOJE_KEY), [pagouDia]);
 
-  const salvarParticipante = useCallback(({ id, nome, valorCombinado, telefone }) => {
+  const salvarParticipante = useCallback(({ id, nome, valorCombinado, telefone, xitiqueId }) => {
     if (id) {
       setParticipantes((arr) => arr.map((p) => (p.id === id ? { ...p, nome, valorCombinado, telefone: telefone || '' } : p)));
     } else {
-      setParticipantes((arr) => [...arr, { id: novoId(), nome, valorCombinado, telefone: telefone || '' }]);
+      setParticipantes((arr) => [...arr, { id: novoId(), nome, valorCombinado, telefone: telefone || '', xitiqueId: xitiqueId || null }]);
     }
   }, [setParticipantes]);
 
@@ -450,12 +457,130 @@ export function DataProvider({ children }) {
   const registrarEntrega = useCallback((valor, participanteId, dk = HOJE_KEY) => {
     const participante = participantes.find((p) => p.id === participanteId);
     if (!participante) return;
-    setEntregas((arr) => [...arr, { id: novoId(), valor, participanteId, nota: participante.nome, dateKey: dk, timestamp: timestampParaDia(dk) }]);
+    setEntregas((arr) => [...arr, { id: novoId(), valor, participanteId, xitiqueId: participante.xitiqueId || null, nota: participante.nome, dateKey: dk, timestamp: timestampParaDia(dk) }]);
   }, [participantes, setEntregas]);
 
   const deleteEntrega = useCallback((id) => {
     setEntregas((arr) => arr.filter((e) => e.id !== id));
   }, [setEntregas]);
+
+  /* ---------- Meus Xitiques (xitiques que geres e que só participas) ---------- */
+  // Guardado dentro de saldo_inicial (__xitiques e __xitiquePessoal), por isso sincroniza sem alterar o SQL.
+  // Participantes, pagamentos e entregas dos xitiques que geres continuam nos arrays de sempre, agora com xitiqueId.
+  const xitiquesGuardados = useMemo(() => saldoInicialMap.__xitiques || [], [saldoInicialMap]);
+  const xitiquePessoal = useMemo(() => saldoInicialMap.__xitiquePessoal || [], [saldoInicialMap]);
+
+  // Dados antigos sem xitiqueId ficam num xitique "legado", para não desaparecerem.
+  const xitiques = useMemo(() => {
+    const temLegado = participantes.some((p) => !p.xitiqueId) || entregas.some((e) => !e.xitiqueId);
+    const lista = [...xitiquesGuardados];
+    if (temLegado && !lista.some((x) => x.id === XITIQUE_LEGADO)) lista.push({ id: XITIQUE_LEGADO, nome: 'Xitique', papel: 'gere', valor: 0 });
+    return lista;
+  }, [xitiquesGuardados, participantes, entregas]);
+
+  // Saldo do Meus Xitiques: o que recebeste na tua vez menos o que retiraste. Não entra no saldo total da app.
+  const saldoXitiquePessoal = useMemo(() => {
+    const recebido = xitiquePessoal.filter((m) => m.tipo === 'recebido').reduce((s, m) => s + m.valor, 0);
+    const retirado = xitiquePessoal.filter((m) => m.tipo === 'retirado').reduce((s, m) => s + m.valor, 0);
+    return Math.round((recebido - retirado) * 100) / 100;
+  }, [xitiquePessoal]);
+
+  // Dinheiro guardado num xitique que geres: pagamentos dos participantes menos entregas.
+  const potXitique = useCallback((xitiqueId) => {
+    const ids = new Set(participantes.filter((p) => xitiqueIdDe(p) === xitiqueId).map((p) => p.id));
+    const pago = pagamentos.filter((p) => ids.has(p.participanteId)).reduce((s, p) => s + p.valor, 0);
+    const entregue = entregas.filter((e) => xitiqueIdDe(e) === xitiqueId).reduce((s, e) => s + e.valor, 0);
+    return Math.round((pago - entregue) * 100) / 100;
+  }, [participantes, pagamentos, entregas]);
+
+  // Quando um movimento tem ligação ao Caixa ou à Poupança, apagá-lo também desfaz essa ligação.
+  function removerLigados(m) {
+    if (m.txId) setTransacoes((arr) => arr.filter((t) => t.id !== m.txId));
+    if (m.mpId) setMovimentosPoupanca((arr) => arr.filter((x) => x.id !== m.mpId));
+  }
+
+  const salvarXitique = useCallback(({ id, nome, papel = 'gere', valor }) => {
+    if (id) {
+      setSaldoInicialMap((m) => ({
+        ...m,
+        __xitiques: (m.__xitiques || []).map((x) => (x.id === id ? { ...x, nome, papel, ...(valor !== undefined ? { valor } : {}) } : x)),
+      }));
+      return id;
+    }
+    const novo = { id: novoId(), nome, papel, valor: valor || 0 };
+    setSaldoInicialMap((m) => ({ ...m, __xitiques: [...(m.__xitiques || []), novo] }));
+    return novo.id;
+  }, [setSaldoInicialMap]);
+
+  const deleteXitique = useCallback((id) => {
+    xitiquePessoal.filter((m) => m.xitiqueId === id).forEach(removerLigados);
+    const idsParticipantes = new Set(participantes.filter((p) => xitiqueIdDe(p) === id).map((p) => p.id));
+    setParticipantes((arr) => arr.filter((p) => !idsParticipantes.has(p.id)));
+    setPagamentos((arr) => arr.filter((p) => !idsParticipantes.has(p.participanteId)));
+    setEntregas((arr) => arr.filter((e) => xitiqueIdDe(e) !== id));
+    setSaldoInicialMap((m) => ({
+      ...m,
+      __xitiques: (m.__xitiques || []).filter((x) => x.id !== id),
+      __xitiquePessoal: (m.__xitiquePessoal || []).filter((x) => x.xitiqueId !== id),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xitiquePessoal, participantes, transacoes, movimentosPoupanca, setParticipantes, setPagamentos, setEntregas, setSaldoInicialMap]);
+
+  // Pagar a tua parte. A origem é escolhida pelo utilizador: caixa, salario, poupanca ou outro.
+  const pagarMinhaParte = useCallback((xitiqueId, valor, dk = HOJE_KEY, { origem = 'caixa', setor = 'produtos', metodo = 'dinheiro', nota = '' } = {}) => {
+    const x = xitiques.find((i) => i.id === xitiqueId);
+    const rotulo = x ? x.nome : 'Xitique';
+    const movimento = { id: novoId(), xitiqueId, tipo: 'pago', valor, origem, nota, dateKey: dk, timestamp: timestampParaDia(dk) };
+    if (origem === 'caixa' || origem === 'salario') {
+      const tx = addTransacao({
+        tipo: 'saida',
+        categoria: origem === 'salario' ? 'salario_proprio' : 'xitique_parte',
+        valor,
+        nota: `Xitique: ${rotulo}${nota ? ' · ' + nota : ''}`,
+        setor,
+        metodo,
+        dateKey: dk,
+      });
+      movimento.txId = tx.id;
+      movimento.setor = setor;
+      movimento.metodo = metodo;
+    } else if (origem === 'poupanca') {
+      const mp = { id: novoId(), tipo: 'retirada', valor, nota: `Xitique: ${rotulo}`, timestamp: timestampParaDia(dk), dateKey: dk };
+      setMovimentosPoupanca((arr) => [...arr, mp]);
+      movimento.mpId = mp.id;
+    }
+    setSaldoInicialMap((m) => ({ ...m, __xitiquePessoal: [...(m.__xitiquePessoal || []), movimento] }));
+  }, [xitiques, addTransacao, setMovimentosPoupanca, setSaldoInicialMap]);
+
+  // Receber a tua vez: vai só para o Meus Xitiques. Não entra no Caixa nem na Poupança.
+  const receberMinhaVez = useCallback((xitiqueId, valor, dk = HOJE_KEY) => {
+    setSaldoInicialMap((m) => ({
+      ...m,
+      __xitiquePessoal: [...(m.__xitiquePessoal || []), { id: novoId(), xitiqueId, tipo: 'recebido', valor, dateKey: dk, timestamp: timestampParaDia(dk) }],
+    }));
+  }, [setSaldoInicialMap]);
+
+  // Retirar do Meus Xitiques para: poupanca, caixa ou definitivo (só fica o registo).
+  const retirarDoXitique = useCallback((valor, nota, dk = HOJE_KEY, { destino = 'definitivo', setor = 'produtos', metodo = 'dinheiro' } = {}) => {
+    const movimento = { id: novoId(), xitiqueId: null, tipo: 'retirado', valor, nota, destino, dateKey: dk, timestamp: timestampParaDia(dk) };
+    if (destino === 'caixa') {
+      const tx = addTransacao({ tipo: 'entrada', categoria: 'outra_entrada', valor, nota: `Do Meus Xitiques${nota ? ' · ' + nota : ''}`, setor, metodo, dateKey: dk });
+      movimento.txId = tx.id;
+    } else if (destino === 'poupanca') {
+      const mp = { id: novoId(), tipo: 'deposito', valor, nota: 'Do Meus Xitiques', timestamp: timestampParaDia(dk), dateKey: dk, origem: 'xitique' };
+      setMovimentosPoupanca((arr) => [...arr, mp]);
+      movimento.mpId = mp.id;
+    }
+    setSaldoInicialMap((m) => ({ ...m, __xitiquePessoal: [...(m.__xitiquePessoal || []), movimento] }));
+  }, [addTransacao, setMovimentosPoupanca, setSaldoInicialMap]);
+
+  const deleteMovimentoXitique = useCallback((id) => {
+    const m = xitiquePessoal.find((x) => x.id === id);
+    if (!m) return;
+    removerLigados(m);
+    setSaldoInicialMap((mm) => ({ ...mm, __xitiquePessoal: (mm.__xitiquePessoal || []).filter((x) => x.id !== id) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xitiquePessoal, transacoes, movimentosPoupanca, setTransacoes, setMovimentosPoupanca, setSaldoInicialMap]);
 
   /* ---------- Poupança ---------- */
   const totalPoupancaCalc = useMemo(() => movimentosPoupanca.reduce((s, m) => (m.tipo === 'deposito' ? s + m.valor : s - m.valor), 0), [movimentosPoupanca]);
@@ -468,12 +593,12 @@ export function DataProvider({ children }) {
 
   // Depósitos antigos que nunca saíram do saldo total (não têm saída ligada no Caixa).
   const depositosSemSaida = useMemo(
-    () => movimentosPoupanca.filter((m) => m.tipo === 'deposito' && !m.txId),
+    () => movimentosPoupanca.filter((m) => m.tipo === 'deposito' && !m.txId && !m.origem),
     [movimentosPoupanca],
   );
 
   const descontarDepositosAntigos = useCallback(() => {
-    const alvos = movimentosPoupanca.filter((m) => m.tipo === 'deposito' && !m.txId);
+    const alvos = movimentosPoupanca.filter((m) => m.tipo === 'deposito' && !m.txId && !m.origem);
     if (!alvos.length) return;
     const ligacoes = {};
     const novas = alvos.map((m) => {
@@ -775,6 +900,7 @@ export function DataProvider({ children }) {
     negocio, setNegocio, fechos, salvarFecho, lembretes, addLembrete, deleteLembrete, marcarLembretePago,
     computeAlertas, exportarBackup, importarBackup,
     vendasFuncionariosNovas, limparVendasFuncionariosNovas, importarVendasFuncionarios,
+    xitiques, xitiquePessoal, saldoXitiquePessoal, salvarXitique, deleteXitique, potXitique, pagarMinhaParte, receberMinhaVez, retirarDoXitique, deleteMovimentoXitique,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

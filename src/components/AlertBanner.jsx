@@ -4,7 +4,6 @@ import { useData } from '../context/DataContext';
 const ESTILOS = {
   stock: { background: 'var(--amber-soft)', color: 'var(--amber)' },
   lembrete: { background: 'var(--amber-soft)', color: 'var(--amber)' },
-  salario: { background: 'var(--amber-soft)', color: 'var(--amber)' },
   fiado: { background: 'var(--brick-soft)', color: 'var(--brick)' },
   fecho: { background: 'var(--mango-soft)', color: 'var(--mango)' },
 };
@@ -18,7 +17,6 @@ export default function AlertBanner({ aoAbrirFecho, aoAbrirLembretes }) {
   function abrir(a) {
     if (a.tipo === 'stock') navigate('/produtos');
     else if (a.tipo === 'fiado') navigate('/fiados');
-    else if (a.tipo === 'salario') navigate('/despesas', { state: { abrirFuncionarios: true } });
     else if (a.tipo === 'lembrete') aoAbrirLembretes?.();
     else if (a.tipo === 'fecho') aoAbrirFecho?.();
   }

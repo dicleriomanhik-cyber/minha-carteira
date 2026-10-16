@@ -11,9 +11,6 @@ import Campo from '../components/Campo';
 import MensagemErro from '../components/MensagemErro';
 import { formatMoney } from '../utils/format';
 import DossieModal from '../components/DossieModal';
-import ReciboModal from '../components/ReciboModal';
-import TermosModal from '../components/TermosModal';
-import AcessoFuncionariosModal from '../components/AcessoFuncionariosModal';
 import { IconeCamara, IconeCaneta, IconeBackup } from '../components/Icons';
 
 function PillButton({ icon: Icon, label, onClick }) {
@@ -38,6 +35,21 @@ function InfoCard({ label, valor }) {
   );
 }
 
+const TERMOS = [
+  ["1. O que é esta aplicação", 'Uma ferramenta para registares o teu caixa, fiados, stock, xitique, poupança, salários e despesas. Não substitui um contabilista e não dá aconselhamento financeiro, fiscal ou jurídico.'],
+  ["2. A tua conta e os teus dados", 'Os teus registos ficam guardados na tua conta, para os poderes ver em vários aparelhos, e também neste telemóvel. Servem para a aplicação funcionar para ti. Só tu deves ter acesso à tua conta, por isso guarda bem a tua palavra-passe.'],
+  ["3. Backup", 'Podes exportar uma cópia dos teus dados a qualquer momento. Recomendamos que o faças com regularidade.'],
+  ["4. Dados de outras pessoas", 'Ao guardares nomes e números de clientes, de participantes do xitique ou de funcionários, deves ter o consentimento deles e usar esses dados apenas para a tua atividade, como cobrar um fiado, lembrar um pagamento ou registar um salário.'],
+  ["5. Lembretes por WhatsApp", 'A aplicação apenas abre o WhatsApp com uma mensagem de lembrete já escrita. O envio é sempre feito por ti, e nada é enviado automaticamente. Usa os lembretes com respeito e só com clientes que te conhecem e te deram o número.'],
+  ["6. Fiados", 'Podes aumentar, receber e editar uma dívida (valor, produto ou serviço, data de vencimento). O relatório mostra o dia em que a dívida foi feita e o dia em que foi paga. Os valores recebidos entram no Caixa na data do recebimento.'],
+  ["7. Poupança", 'A Poupança é um registo de controlo dentro da aplicação. Ela não é uma conta bancária e não guarda dinheiro real, nem paga juros. O que guardas sai do saldo total do Caixa. Ao retirar, o dinheiro não volta ao Caixa; fica só o registo.'],
+  ["8. Salários e despesas", 'Os pagamentos de salários (o teu e os dos funcionários) e as despesas operacionais saem do saldo total e aparecem no relatório. Estes registos servem para o teu controlo e não substituem a folha de salários, os descontos legais (como a segurança social) nem as declarações de impostos, que são da tua responsabilidade.'],
+  ["9. Exatidão dos registos", 'Os totais são calculados a partir do que registas. Se houver erros nos registos, haverá erros nos totais. Confere os valores antes de tomares decisões.'],
+  ["10. Limite de responsabilidade", 'A aplicação é fornecida tal como está, sem garantia de funcionamento contínuo ou livre de erros. Na medida permitida pela lei, a SmartMetrics Limitada não se responsabiliza por perdas resultantes do seu uso.'],
+  ["11. Alterações", 'Estes termos podem mudar quando a aplicação evoluir. A versão em vigor é a que aparece aqui. Última atualização: outubro de 2026.'],
+  ["12. Contacto", 'Para dúvidas, usa a secção Suporte no teu Perfil.'],
+];
+
 const GUIA = [
   ["Caixa", 'É a base da aplicação. Regista as entradas (vendas de produtos, serviços, outras entradas) e as saídas do dia, escolhendo se foi dinheiro, M-Pesa, e-Mola ou mKesh. O saldo total é a soma automática dos saldos de Produtos e de Serviços, e acumula de um dia para o outro. Para corrigir um erro, apaga o registo com o ✕ e faz de novo.'],
   ["Saldos iniciais", 'No Perfil, define uma só vez quanto tinhas em Produtos e em Serviços quando começaste a usar a aplicação. Depois disso não precisas de mexer.'],
@@ -48,7 +60,6 @@ const GUIA = [
   ["Poupança", 'Cria metas, por exemplo "Comprar um Terreno", e vai guardando dinheiro nelas. O que guardas sai do saldo total do Caixa. O anel de cada meta mostra o quanto já conseguiste.'],
   ["Relatório", 'Toca em "Relatório" no topo para ver o resumo do dia, da semana, do mês ou de tudo: entradas, saídas, salários e despesas, fiados feitos e pagos, xitique e poupança.'],
   ["Dossiê para crédito", 'No Perfil, em "Dossiê para pedir crédito", escolhes 3, 6 ou 12 meses e a app cria um PDF com vendas, lucro, despesas, fiados cobrados, stock e poupança, com gráfico mês a mês. Podes descarregar ou enviar por WhatsApp. Confere os registos antes de o entregares.'],
-  ["Comprovativos", 'No Perfil, em "Comprovativos de pagamento", escolhes um salário, a renda ou outra despesa que já registaste, confirmas o nome de quem recebeu e escolhes PDF ou imagem. Depois envias por WhatsApp ou descarregas. É um comprovativo interno e não substitui factura nem recibo fiscal.'],
   ["Backup", 'No Perfil, exporta regularmente uma cópia dos teus dados. A tua conta também sincroniza os dados entre aparelhos.'],
 ];
 
@@ -72,8 +83,6 @@ export default function Perfil() {
   const [termosAberto, setTermosAberto] = useState(false);
   const [guiaAberto, setGuiaAberto] = useState(false);
   const [dossieAberto, setDossieAberto] = useState(false);
-  const [reciboAberto, setReciboAberto] = useState(false);
-  const [acessoAberto, setAcessoAberto] = useState(false);
   const [ultimoBackup, setUltimoBackup] = useState(() => { try { return localStorage.getItem('carteira_ultimo_backup') || ''; } catch { return ''; } });
   function fazerExport() {
     exportarBackup();
@@ -147,7 +156,7 @@ export default function Perfil() {
 
   async function aoConfirmarExclusao() {
     const { error } = await excluirConta();
-    if (error) {
+    if (error && error.message !== 'not_configured') {
       setErro('Não foi possível excluir a conta agora. Tenta novamente.');
       return;
     }
@@ -183,28 +192,6 @@ export default function Perfil() {
         <div className="mt-5 w-full space-y-2.5">
           <InfoCard label="WhatsApp" valor={profile?.whatsapp} />
           <InfoCard label="Email" valor={user?.email} />
-        </div>
-
-        <div className="mt-6 w-full">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Comprovativos</p>
-          <button onClick={() => setReciboAberto(true)} className="flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
-            <span>
-              <span className="block text-sm font-semibold text-[var(--ink)]">Comprovativos de pagamento</span>
-              <span className="mt-0.5 block text-xs text-[var(--ink-soft)]">Salário, renda e outras despesas, em PDF ou imagem</span>
-            </span>
-            <span aria-hidden="true" className="text-[var(--ink)]">›</span>
-          </button>
-        </div>
-
-        <div className="mt-6 w-full">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Funcionários</p>
-          <button onClick={() => setAcessoAberto(true)} className="flex w-full items-center justify-between rounded-2xl bg-[var(--bg-soft)] px-4 py-3 text-left">
-            <span>
-              <span className="block text-sm font-semibold text-[var(--ink)]">Acesso dos funcionários</span>
-              <span className="mt-0.5 block text-xs text-[var(--ink-soft)]">Cada um entra com um PIN e só regista vendas</span>
-            </span>
-            <span aria-hidden="true" className="text-[var(--ink)]">›</span>
-          </button>
         </div>
 
         <div className="mt-6 w-full">
@@ -261,8 +248,6 @@ export default function Perfil() {
       </div>
 
       <DossieModal aberto={dossieAberto} aoFechar={() => setDossieAberto(false)} />
-      <ReciboModal aberto={reciboAberto} aoFechar={() => setReciboAberto(false)} />
-      <AcessoFuncionariosModal aberto={acessoAberto} aoFechar={() => setAcessoAberto(false)} />
 
       {/* Editar informações */}
       <Modal titulo="Editar Informações" aberto={aEditar === true} aoFechar={() => setAEditar(false)}>
@@ -316,12 +301,18 @@ export default function Perfil() {
       </Modal>
 
       {/* Termos e condições */}
-      <TermosModal aberto={termosAberto} aoFechar={() => setTermosAberto(false)} />
+      <Modal titulo="Termos e condições" aberto={termosAberto} aoFechar={() => setTermosAberto(false)}>
+        <div className="space-y-3 text-sm leading-relaxed text-[var(--ink-soft)]">
+          {TERMOS.map(([t, x]) => (
+            <div key={t}><p className="font-semibold text-[var(--ink)]">{t}</p><p>{x}</p></div>
+          ))}
+        </div>
+      </Modal>
 
       {/* Confirmar exclusão de conta */}
       <Modal titulo="Excluir conta" aberto={confirmarExclusao} aoFechar={() => setConfirmarExclusao(false)}>
         <p className="mb-4 text-sm leading-relaxed text-[var(--ink-soft)]">
-          A tua conta fica marcada para ser apagada daqui a 7 dias. Se entrares outra vez antes disso, podes recuperá-la com todos os teus dados. Passados os 7 dias, a conta e todos os dados do teu negócio são apagados de forma permanente e não podem ser recuperados. A tua foto de perfil é apagada já. Tens a certeza?
+          Isto apaga a tua conta e todos os dados associados de forma permanente. Não é possível desfazer. Tens a certeza?
         </p>
         {erro && <div className="mb-3"><MensagemErro>{erro}</MensagemErro></div>}
         <div className="space-y-2.5">

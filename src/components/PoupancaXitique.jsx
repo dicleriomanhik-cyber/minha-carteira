@@ -3,6 +3,7 @@ import Botao from './Botao';
 import Campo from './Campo';
 import Modal from './Modal';
 import SeletorDia from './SeletorDia';
+import SeletorMetodo from './SeletorMetodo';
 import EmptyState from './EmptyState';
 import XitiqueParticipoCard from './XitiqueParticipoCard';
 import XitiqueFormModal from './XitiqueFormModal';
@@ -39,6 +40,8 @@ export default function PoupancaXitique() {
   const [modalRetirar, setModalRetirar] = useState(false);
   const [valorRetirar, setValorRetirar] = useState('');
   const [notaRetirar, setNotaRetirar] = useState('');
+  const [destinoRetirar, setDestinoRetirar] = useState('definitivo');
+  const [metodoRetirar, setMetodoRetirar] = useState('dinheiro');
   const [diaRetirar, setDiaRetirar] = useState(HOJE_KEY);
   const [verTodos, setVerTodos] = useState(false);
 
@@ -48,6 +51,8 @@ export default function PoupancaXitique() {
     if (saldoXitiquePessoal <= 0) { await avisar('Ainda não há dinheiro no Xitique da tua Poupança.'); return; }
     setValorRetirar('');
     setNotaRetirar('');
+    setDestinoRetirar('definitivo');
+    setMetodoRetirar('dinheiro');
     setDiaRetirar(HOJE_KEY);
     setModalRetirar(true);
   }
@@ -57,7 +62,7 @@ export default function PoupancaXitique() {
     if (!v || v <= 0) { await avisar('Introduz um valor válido.'); return; }
     if (v > saldoXitiquePessoal + 0.01) { await avisar('Esse valor é maior que o teu Xitique (' + formatMoney(saldoXitiquePessoal) + ' MT).'); return; }
     if (!notaRetirar.trim()) { await avisar('Escreve o motivo da retirada.'); return; }
-    retirarDoXitique(v, notaRetirar.trim(), diaRetirar);
+    retirarDoXitique(v, notaRetirar.trim(), diaRetirar, { destino: destinoRetirar, setor: 'produtos', metodo: metodoRetirar });
     setModalRetirar(false);
   }
 
@@ -164,7 +169,26 @@ export default function PoupancaXitique() {
 
       <Modal titulo="Retirar do Xitique" aberto={modalRetirar} aoFechar={() => setModalRetirar(false)}>
         <div className="space-y-4">
-          <p className="text-xs leading-relaxed text-[var(--ink-soft)]">Este dinheiro sai do Xitique da tua Poupança e não volta ao Caixa. Fica registado no histórico.</p>
+          <p className="text-xs leading-relaxed text-[var(--ink-soft)]">Escolhe para onde vai o dinheiro. Fica sempre registado no histórico.</p>
+          <Campo label="Para onde vai">
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { id: 'poupanca', label: 'Poupança', ajuda: 'Entra na Poupança. Não mexe no Caixa.' },
+                { id: 'caixa', label: 'Caixa', ajuda: 'Entra no Caixa como entrada, com o método que escolheres.' },
+                { id: 'definitivo', label: 'Retirar definitivamente', ajuda: 'Só fica o registo. Não vai para mais lado nenhum.' },
+              ].map((d) => (
+                <button key={d.id} type="button" onClick={() => setDestinoRetirar(d.id)} className={`rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.99] ${destinoRetirar === d.id ? 'border-[var(--mango)] bg-[var(--mango-soft)]' : 'border-transparent bg-[var(--bg-soft)]'}`}>
+                  <span className="block text-[13px] font-semibold text-[var(--ink)]">{d.label}</span>
+                  <span className="block text-[11px] text-[var(--ink-soft)]">{d.ajuda}</span>
+                </button>
+              ))}
+            </div>
+          </Campo>
+          {destinoRetirar === 'caixa' && (
+            <Campo label="Método">
+              <SeletorMetodo value={metodoRetirar} onChange={setMetodoRetirar} />
+            </Campo>
+          )}
           <Campo label="Dia">
             <SeletorDia value={diaRetirar} onChange={setDiaRetirar} />
           </Campo>

@@ -84,7 +84,7 @@ export default function XitiqueParticipoCard({ x, aoApagar }) {
         aoFechar={() => setPagar(false)}
         titulo={`A tua parte em ${x.nome}`}
         valorInicial={x.valor}
-        aoConfirmar={({ valor, dia, setor, metodo }) => { pagarMinhaParte(x.id, valor, dia, { setor, metodo }); setPagar(false); }}
+        aoConfirmar={({ valor, dia, origem, setor, metodo, nota }) => { pagarMinhaParte(x.id, valor, dia, { origem, setor, metodo, nota }); setPagar(false); }}
       />
 
       <Modal titulo={`A tua vez em ${x.nome}`} aberto={vez} aoFechar={() => setVez(false)}>
