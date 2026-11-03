@@ -244,15 +244,15 @@ export function DataProvider({ children }) {
   // Se ainda não existir, usa o saldo do primeiro dia antigo (compatibilidade).
   const saldoInicialGlobal = useMemo(() => {
     const g = saldoInicialMap.__global;
-    if (g) return { produtos: g.produtos || 0, maquina: g.maquina || 0 };
+    if (g) { const ok = g.mes === HOJE_KEY.slice(0, 7); return { produtos: ok ? (g.produtos || 0) : 0, maquina: ok ? (g.maquina || 0) : 0, mes: g.mes || null }; }
     const dias = Object.keys(saldoInicialMap).filter((k) => !k.startsWith('__')).sort();
     if (!dias.length) return { produtos: 0, maquina: 0 };
     const v = normalizarSaldoInicialDia(saldoInicialMap[dias[0]]);
-    return { produtos: v.produtos || 0, maquina: v.maquina || 0 };
+    return { produtos: 0, maquina: 0, mes: null };
   }, [saldoInicialMap, normalizarSaldoInicialDia]);
 
   const setSaldoInicialGlobal = useCallback((setor, valor) => {
-    setSaldoInicialMap((m) => ({ ...m, __global: { ...saldoInicialGlobal, [setor]: valor } }));
+    setSaldoInicialMap((m) => ({ ...m, __global: { ...saldoInicialGlobal, [setor]: valor, mes: HOJE_KEY.slice(0, 7) } }));
   }, [setSaldoInicialMap, saldoInicialGlobal]);
 
   // Saldo de abertura de um dia = inicial global + tudo o que entrou e saiu antes desse dia.
@@ -261,7 +261,7 @@ export function DataProvider({ children }) {
     const mesDia = dk.slice(0, 7); const antes = transacoes.filter((t) => (t.setor || 'produtos') === setor && t.dateKey < dk && t.dateKey.slice(0, 7) === mesDia);
     const ent = antes.filter((t) => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0);
     const sai = antes.filter((t) => t.tipo === 'saida').reduce((s, t) => s + t.valor, 0);
-    return ent - sai;
+    return (mesDia === HOJE_KEY.slice(0, 7) ? (saldoInicialGlobal[setor] || 0) : 0) + ent - sai;
   }, [transacoes, saldoInicialGlobal]);
 
   // Mantido por compatibilidade: saldo inicial "total" de um dia (soma dos setores).
@@ -356,7 +356,7 @@ export function DataProvider({ children }) {
   const saldoPorMetodo = useMemo(() => {
     const r = {};
     METODOS.forEach((m) => { r[m.id] = 0; });
-    const mesAtual = HOJE_KEY.slice(0, 7);
+    const mesAtual = HOJE_KEY.slice(0, 7); r.dinheiro += (saldoInicialGlobal.produtos || 0) + (saldoInicialGlobal.maquina || 0);
     transacoes.forEach((t) => {
       if (t.dateKey.slice(0, 7) !== mesAtual) return; const m = t.metodo && r[t.metodo] !== undefined ? t.metodo : 'dinheiro';
       r[m] += t.tipo === 'entrada' ? t.valor : -t.valor;
