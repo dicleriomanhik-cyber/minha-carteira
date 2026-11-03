@@ -258,10 +258,10 @@ export function DataProvider({ children }) {
   // Saldo de abertura de um dia = inicial global + tudo o que entrou e saiu antes desse dia.
   // Assim o saldo acumula todos os dias, sem ter de ser definido diariamente.
   const getSaldoInicialSetor = useCallback((dk, setor) => {
-    const antes = transacoes.filter((t) => (t.setor || 'produtos') === setor && t.dateKey < dk);
+    const mesDia = dk.slice(0, 7); const antes = transacoes.filter((t) => (t.setor || 'produtos') === setor && t.dateKey < dk && t.dateKey.slice(0, 7) === mesDia);
     const ent = antes.filter((t) => t.tipo === 'entrada').reduce((s, t) => s + t.valor, 0);
     const sai = antes.filter((t) => t.tipo === 'saida').reduce((s, t) => s + t.valor, 0);
-    return (saldoInicialGlobal[setor] || 0) + ent - sai;
+    return ent - sai;
   }, [transacoes, saldoInicialGlobal]);
 
   // Mantido por compatibilidade: saldo inicial "total" de um dia (soma dos setores).
@@ -356,9 +356,9 @@ export function DataProvider({ children }) {
   const saldoPorMetodo = useMemo(() => {
     const r = {};
     METODOS.forEach((m) => { r[m.id] = 0; });
-    r.dinheiro += (saldoInicialGlobal.produtos || 0) + (saldoInicialGlobal.maquina || 0);
+    const mesAtual = HOJE_KEY.slice(0, 7);
     transacoes.forEach((t) => {
-      const m = t.metodo && r[t.metodo] !== undefined ? t.metodo : 'dinheiro';
+      if (t.dateKey.slice(0, 7) !== mesAtual) return; const m = t.metodo && r[t.metodo] !== undefined ? t.metodo : 'dinheiro';
       r[m] += t.tipo === 'entrada' ? t.valor : -t.valor;
     });
     return r;
